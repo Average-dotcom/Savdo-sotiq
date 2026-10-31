@@ -1,0 +1,1798 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#12424f">
+<title>Savdo va ombor tizimi — 4-bosqich</title>
+<style>
+:root{
+  --paper:#f2f4f3; --card:#ffffff; --ink:#18232b; --mute:#5d6b74; --line:#d9dfe2;
+  --teal:#12424f; --teal2:#1d6577; --amber:#e3a02f; --amberbg:#fdf1d8; --red:#b3374a; --redbg:#fae3e7; --green:#2f7d52; --greenbg:#e1f2e8;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#11181d; --card:#1a242b; --ink:#e8eef1; --mute:#93a2ab; --line:#2c3a43; --teal:#6fc1d4; --teal2:#4aa3b9; --amberbg:#3b2f14; --redbg:#40202a; --greenbg:#1b3327; --green:#6fcf97; --red:#ef8a9a}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.top{background:var(--teal);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+@media (prefers-color-scheme:dark){.top{background:#0c2d37;color:#e8eef1}}
+.top b{font-size:16px}
+.top .sp{flex:1}
+.top select{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:inherit;border-radius:8px;padding:6px 8px}
+.top select option{color:#18232b}
+.who{font-size:13px;opacity:.9}
+.grps{display:flex;gap:6px;padding:10px 14px;background:var(--paper);overflow-x:auto;border-bottom:1px solid var(--line)}
+.grps button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 14px;cursor:pointer;color:var(--mute);font-weight:700;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.grps button.on{color:#fff;background:var(--teal);border-color:var(--teal)}
+.tabs{display:flex;gap:4px;padding:10px 14px 0;border-bottom:1px solid var(--line);background:var(--card);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;border-bottom:3px solid transparent;cursor:pointer;color:var(--mute);font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tabs button.on{color:var(--teal);border-color:var(--amber)}
+.beta{display:inline-block;background:var(--amber);color:#fff;border-radius:5px;padding:1px 6px;font-size:9.5px;font-weight:800;letter-spacing:.03em;vertical-align:1px}
+main{max-width:1000px;margin:0 auto;padding:14px}
+.btn{border:0;border-radius:9px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--teal);color:#fff}
+@media (prefers-color-scheme:dark){.btn{color:#0c2d37}}
+.btn.ghost{background:transparent;color:var(--teal);border:1px solid var(--line)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:10px 12px}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.bar>*{flex:1 1 150px}
+.bar .btn{flex:0 0 auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat small{color:var(--mute);display:block}
+.stat strong{font-size:19px}
+.alert{border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
+.alert.warn{background:var(--amberbg);border:1px solid var(--amber)}
+.alert.bad{background:var(--redbg);border:1px solid var(--red)}
+.row{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.row .nm{font-weight:600}
+.row .sub{color:var(--mute);font-size:13px;word-break:break-all}
+.row .num{text-align:right}
+.row .act{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.b-ok{background:var(--greenbg);color:var(--green)}
+.b-low{background:var(--amberbg);color:#9a6a0a}
+@media (prefers-color-scheme:dark){.b-low{color:var(--amber)}}
+.b-zero{background:var(--redbg);color:var(--red)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.muted{color:var(--mute)}
+.empty{text-align:center;color:var(--mute);padding:30px 10px}
+dialog{border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,94vw);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw}
+.login{max-width:380px;margin:8vh auto;padding:0 14px}
+.login h1{font-size:24px;margin:0 0 4px}
+.hint{font-size:13px;color:var(--mute);margin-top:14px;line-height:1.7}
+.err{color:var(--red);font-size:14px;margin-top:8px;min-height:20px}
+.lg{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:baseline;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:14px}
+.lg .t{color:var(--mute);font-size:12px}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--paper);border:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.pos{display:grid;grid-template-columns:1fr 1.1fr;gap:14px;align-items:start}
+@media (max-width:760px){.pos{grid-template-columns:1fr}}
+.cl{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:8px 0}
+.cl .nm{font-weight:600}.cl .sub{color:var(--mute);font-size:13px}
+.cl input[type=number]{width:72px;padding:8px}
+.qty{display:flex;gap:4px;align-items:center}
+.qty input{width:56px;text-align:center;padding:6px}
+.num{text-align:right}
+.sumrow{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.sumrow.big{font-weight:700;font-size:17px;border-top:1px solid var(--line);margin-top:4px;padding-top:6px}
+.rc{font-family:"Courier New",monospace;font-size:13px;line-height:1.5;color:var(--ink)}
+.rc hr{border:0;border-top:1px dashed var(--mute);margin:8px 0}
+.rc .c{text-align:center}
+.rr{display:flex;justify-content:space-between;gap:10px}
+.rr.big{font-weight:700;font-size:15px}
+@media print{
+  body *{visibility:hidden}
+  #receipt,#receipt *,#printarea,#printarea *{visibility:visible}
+  #receipt,#printarea{position:absolute;left:0;top:0;width:100%;color:#000}
+}
+.chk{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink);font-size:14px}
+.chk input{width:auto}
+.net{font-size:12px;padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.16)}
+.net.offl{background:var(--amber);color:#18232b;font-weight:700}
+.stats .stat strong{font-size:17px}
+
+/* ---- Kirish va umumiy dizayn ---- */
+.lw{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100vh}
+.lb{background:radial-gradient(circle at 15% 20%,rgba(255,255,255,.18),transparent 45%),radial-gradient(circle at 85% 88%,rgba(227,160,47,.38),transparent 42%),linear-gradient(150deg,var(--teal),var(--teal2));color:#fff;padding:7vh 6vw;display:flex;flex-direction:column;justify-content:center;gap:14px}
+@media (prefers-color-scheme:dark){.lb{background:radial-gradient(circle at 85% 88%,rgba(227,160,47,.25),transparent 42%),linear-gradient(150deg,#0c2d37,#12424f)}}
+.logo{width:68px;height:68px;border-radius:20px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);display:grid;place-items:center;font-size:32px;font-weight:800}
+.lb h1{font-size:clamp(28px,4vw,42px);margin:6px 0 0;line-height:1.1}
+.lb p{margin:0;opacity:.9;max-width:36ch}
+.feat{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.feat li{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:5px 12px;font-size:13px}
+.lf{display:flex;align-items:center;justify-content:center;padding:28px 18px}
+.lf form{width:min(390px,100%);animation:rise .5s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.lf h2{margin:0 0 2px;font-size:26px}
+.pw{position:relative}.pw input{padding-right:70px}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--teal);font-weight:700;cursor:pointer;padding:6px 8px}
+.sw{display:flex;gap:10px;flex-wrap:wrap}.sw1{display:block;margin:0;position:relative}
+.sw1 input{position:absolute;opacity:0;width:1px;height:1px}
+.sw1 span{display:block;width:34px;height:34px;border-radius:50%;border:3px solid transparent;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.sw1 input:checked+span{border-color:var(--ink)}.sw1 input:focus-visible+span{outline:3px solid var(--amber);outline-offset:2px}
+@media (max-width:800px){.lw{grid-template-columns:1fr}.lb{padding:28px 20px}.lf{align-items:flex-start}}
+.top{background:linear-gradient(90deg,var(--teal),var(--teal2))}
+@media (prefers-color-scheme:dark){.top{background:#0c2d37}}
+.card,.stat,.row,.lg{box-shadow:0 1px 2px rgba(16,40,50,.06),0 8px 18px -12px rgba(16,40,50,.22)}
+.btn{transition:transform .12s,filter .12s}.btn:hover{filter:brightness(1.1)}.btn:active{transform:scale(.97)}
+input:focus,select:focus{border-color:var(--teal);outline:2px solid color-mix(in srgb,var(--teal) 25%,transparent)}
+.tabs button{border-radius:8px 8px 0 0;transition:background .15s}.tabs button:hover{background:var(--paper)}
+h3{margin:18px 0 8px;font-size:16px}
+
+/* ---- Animatsiyalar va rasmlar ---- */
+.lb{position:relative;overflow:hidden;background-size:cover}
+.lb>*:not(.blob){position:relative;z-index:1}
+.blob{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none;animation:drift 14s ease-in-out infinite alternate}
+.blob.b1{width:340px;height:340px;background:rgba(255,255,255,.28);top:-90px;left:-70px}
+.blob.b2{width:300px;height:300px;background:rgba(227,160,47,.5);bottom:-90px;right:-40px;animation-duration:18s;animation-delay:-6s}
+@keyframes drift{to{transform:translate(80px,60px) scale(1.25)}}
+.logo{animation:float 5s ease-in-out infinite;overflow:hidden}.logo img{width:100%;height:100%;object-fit:contain}
+@keyframes float{50%{transform:translateY(-8px) rotate(-3deg)}}
+.shine{background:linear-gradient(90deg,#fff 25%,#ffe3a6 45%,#fff 65%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 4.5s linear infinite}
+@keyframes shine{to{background-position:-220% 0}}
+.feat li{animation:rise .6s ease both}.feat li:nth-child(2){animation-delay:.12s}.feat li:nth-child(3){animation-delay:.24s}.feat li:nth-child(4){animation-delay:.36s}
+.typing::after{content:'▍';margin-left:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+main{animation:fade .35s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+.row,.stat{transition:transform .15s,box-shadow .15s}
+.row:hover,.stat:hover{transform:translateY(-2px);box-shadow:0 10px 22px -12px rgba(16,40,50,.35)}
+dialog[open]{animation:pop .22s ease both}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(10px)}}
+.toast{animation:toastin .3s ease both}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,14px)}}
+.av{border-radius:50%;object-fit:cover;display:inline-grid;place-items:center;background:rgba(255,255,255,.24);color:#fff;font-weight:700;vertical-align:middle;flex:none}
+.av.sq{border-radius:8px;object-fit:contain}
+.top b{display:inline-flex;align-items:center;gap:8px}
+.upl{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.pv{width:76px;height:76px;border-radius:16px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--paper);font-size:30px;font-weight:800;color:var(--teal)}
+.pv img{width:100%;height:100%;object-fit:cover}.pv.wide{width:150px}
+label.btn{margin:0;display:inline-block;color:#fff}.btn:focus-within{outline:3px solid var(--amber);outline-offset:2px}
+.vh{position:absolute;opacity:0;width:1px;height:1px}
+
+/* ---- Qiziqarli dizayn ---- */
+body{background-image:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--teal) 12%,transparent),transparent 42%),radial-gradient(circle at 0 100%,color-mix(in srgb,var(--amber) 14%,transparent),transparent 42%);background-attachment:fixed}
+.btn{background:linear-gradient(135deg,var(--teal),var(--teal2));box-shadow:0 8px 16px -10px var(--teal)}
+.btn.ghost{background:transparent;box-shadow:none}
+.tabs{gap:2px;box-shadow:0 2px 10px -8px rgba(0,0,0,.4)}
+.tabs button .ic{margin-right:6px;display:inline-block;transition:transform .2s}
+.tabs button:hover .ic,.tabs button.on .ic{transform:scale(1.25) rotate(-6deg)}
+.tabs button.on{background:color-mix(in srgb,var(--teal) 10%,transparent)}
+.stat{border-top:3px solid var(--teal2);position:relative;overflow:hidden}
+.stat:nth-child(even){border-top-color:var(--amber)}
+.stat::after{content:'';position:absolute;right:-18px;top:-18px;width:60px;height:60px;border-radius:50%;background:color-mix(in srgb,var(--teal) 9%,transparent)}
+.row{border-left:4px solid transparent}.row:hover{border-left-color:var(--amber)}
+.card h2{display:flex;align-items:center;gap:8px}
+.sw1.cpk{width:34px;height:34px}
+.sw1.cpk input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sw1.cpk span{background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red);display:grid;place-items:center;font-size:15px}
+.sw1.cpk input:focus-visible+span{outline:3px solid var(--amber);outline-offset:2px}
+.top .av{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.logo{box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion:no-preference){.stat{animation:rise .5s ease both}.stat:nth-child(2){animation-delay:.08s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.24s}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<dialog id="dlg"></dialog>
+
+<script>
+/* ---------- Yordamchi funksiyalar ---------- */
+const fmt = n => Math.round(Number(n)).toLocaleString('ru-RU').replace(/\u00a0/g,' ');
+const money = n => fmt(n) + " so‘m";
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+const parseCodes = s => [...new Set(String(s).split(/[\s,;]+/).filter(Boolean))];
+
+/* ---------- Ma’lumotlar (demo: xotirada) ---------- */
+const branches = [{id:'b1',name:'Chilonzor filiali'},{id:'b2',name:'Yunusobod filiali'}];
+const roles = {
+  super:    {label:'Boshlovchi (bosh administrator)', owner:true, tabs:['kassa','sotuvlar','smena','ombor','kirim','inventar','transfer','xarajat','hisobot','ovoz','tarix','zaxira','filiallar','xodimlar'], edit:true,  cost:true,  all:true,  sell:true,  refund:true,  admin:true, stockops:true, expense:true, report:true, backup:true},
+  filial:   {label:'Filial administratori',   tabs:['kassa','sotuvlar','smena','ombor','kirim','inventar','transfer','xarajat','hisobot','ovoz','tarix'],           edit:true,  cost:true,  all:false, sell:true,  refund:true,  admin:true, stockops:true, expense:true, report:true},
+  omborchi: {label:'Omborchi',                tabs:['ombor','kirim','inventar','transfer','ovoz','tarix'],                                                          edit:true,  cost:true,  all:false, stockops:true},
+  kassir:   {label:'Kassir',                  tabs:['kassa','sotuvlar','smena','ombor','ovoz'],                                                                     edit:false, cost:false, all:false, sell:true,  own:true},
+  viewer:   {label:'Hisobot ko‘ruvchi',       tabs:['sotuvlar','smena','ombor','xarajat','hisobot','ovoz','tarix'],                                                 edit:false, cost:true,  all:true,  report:true}
+};
+Object.values(roles).forEach(r => r.tabs.push('profil'));
+const users = [
+  {login:'admin',   pass:'admin123', name:'Boshlovchi',  role:'super',    branch:'b1'},
+  {login:'filial1', pass:'1234',     name:'Filial administratori', role:'filial',   branch:'b1'},
+  {login:'ombor1',  pass:'1234',     name:'Omborchi Aziz',       role:'omborchi', branch:'b1'},
+  {login:'kassir1', pass:'1234',     name:'Kassir Dilnoza',      role:'kassir',   branch:'b1'},
+  {login:'hisobot', pass:'1234',     name:'Hisobotchi',          role:'viewer',   branch:'b1'}
+];
+let nextId = 1;
+const mk = (name,codes,cat,cost,price,min,s1,s2) => ({id:nextId++,name,barcodes:codes,cat,cost,price,min,stock:{b1:s1,b2:s2}});
+const products = [
+  mk('Snickers Mini',['73836368'],'Shirinliklar',2800,4000,10,5,12),
+  mk('Coca-Cola 0.5 l',['5449000000996','5449000214911'],'Ichimliklar',4500,6500,20,48,30),
+  mk('Non (patir)',['2000000000011'],'Non mahsulotlari',2500,4000,15,0,9),
+  mk('Sut 1 l «Lactel»',['4780000000123'],'Sut mahsulotlari',9000,12500,12,8,20),
+  mk('Shakar 1 kg',['4780000000456'],'Oziq-ovqat',11000,14000,10,35,40),
+  mk('Choy «Ahmad» 100 g',['6291041500213'],'Oziq-ovqat',17000,22000,8,6,3),
+  mk('Suv 1.5 l',['4780000000789'],'Ichimliklar',2200,3500,25,60,55)
+];
+const log = [];
+let logId = 1;
+function addLog(type, product, branch, qty, sum, note){
+  log.push(Object.freeze({id:logId++, t:new Date(), type, pid:product?.id, pname:product?.name || '—', branch, user:S.user.name, qty, sum, note:note||''}));
+}
+
+/* ---------- Holat ---------- */
+const S = {user:null, branch:'b1', tab:'ombor', grp:'tovar', q:'', cat:'', low:false, kq:'', kpid:null, lt:'', lb:'', cart:[], dtype:'pct', dval:0, card:0, given:0, paying:false, sq:'', sd:'today', trd:[], trTo:'', trdBranch:'', xm:'', online:true, autoBk:true, bkMin:5, rp:'today', vs:false, vlang:'uz-UZ'};
+const tabGroups = {kassa:'savdo', sotuvlar:'savdo', smena:'savdo', ovoz:'savdo', ombor:'tovar', kirim:'tovar', inventar:'tovar', transfer:'tovar', xarajat:'huj', hisobot:'huj', tarix:'huj', zaxira:'huj', filiallar:'bosh', xodimlar:'bosh', profil:'profil'};
+const groupMeta = {savdo:{label:'Savdo va kassa', icon:'🛒'}, tovar:{label:'Tovarlar', icon:'📦'}, huj:{label:'Hujjatlar', icon:'📑'}, bosh:{label:'Boshqaruv', icon:'🏬'}, profil:{label:'Profil', icon:'⚙️'}};
+const groupOrder = ['savdo', 'tovar', 'huj', 'bosh', 'profil'];
+const grpOf = t => tabGroups[t] || 'savdo';
+const R = () => roles[S.user.role];
+const stockOf = p => p.stock[S.branch] || 0;
+const status = p => { const s = stockOf(p); return s <= 0 ? 'zero' : s <= p.min ? 'low' : 'ok'; };
+const bname = id => branches.find(b => b.id === id)?.name || id;
+
+function toast(msg){
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; el.setAttribute('role','status');
+  document.body.appendChild(el); setTimeout(() => el.remove(), 2600);
+}
+
+/* ---------- Kirish ---------- */
+function showLogin(){
+  const h = new Date().getHours(), hi = h < 5 ? 'Xayrli tun' : h < 12 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech';
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(BRAND.shop.trim().charAt(0).toUpperCase() || 'S', BRAND.shop, BRAND.tagline || 'Savdo va ombor boshqaruv tizimi')}
+  <section class="lf"><form id="lf" autocomplete="off">
+      <h2>${hi}!</h2><div class="muted">${esc(BRAND.shop)} tizimiga kirish uchun login va parolni kiriting</div>
+      <label for="lg">Login</label><input id="lg" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <label for="ps">Parol</label><div class="pw"><input id="ps" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required><button type="button" id="pt" aria-label="Parolni ko‘rsatish">Ko‘rsat</button></div>
+      <div class="err" id="le" role="alert"></div>
+      <button class="btn" style="width:100%">Kirish</button>
+      ${BRAND.demo ? `<div class="hint"><b>Demo hisoblar:</b> filial1, ombor1, kassir1, hisobot / 1234</div>` : ''}
+  </form></section></div>`;
+  typeIn($('tg'));
+  $('pt').onclick = () => { const i = $('ps'), sh = i.type === 'password'; i.type = sh ? 'text' : 'password'; $('pt').textContent = sh ? 'Yashir' : 'Ko‘rsat'; };
+  let fails = 0, lockUntil = 0;
+  $('lf').onsubmit = e => {
+    e.preventDefault();
+    const wait = Math.ceil((lockUntil - Date.now()) / 1000);
+    if(wait > 0){ $('le').textContent = `Juda ko‘p xato urinish. ${wait} soniyadan keyin qayta urinib ko‘ring.`; return; }
+    const u = users.find(x => x.login.toLowerCase() === $('lg').value.trim().toLowerCase() && x.pass === $('ps').value && !x.off);
+    if(!u){
+      fails++; if(fails >= 5){ lockUntil = Date.now() + Math.min(300, 15 * 2 ** (fails - 5)) * 1000; }
+      $('le').textContent = fails >= 5 ? 'Juda ko‘p xato urinish. Birozdan keyin qayta urinib ko‘ring.' : 'Login yoki parol noto‘g‘ri. Qayta urinib ko‘ring.'; return;
+    }
+    fails = 0;
+    lastLogin = new Date(); ping('kirish'); S.user = u; S.branch = u.branch; S.tab = roles[u.role].tabs[0]; S.grp = grpOf(S.tab); S.q=''; S.cat=''; S.low=false; S.cart=[]; S.dval=0; S.card=0; S.given=0;
+    ssSet(LS.session, u.login); render();
+  };
+  $('lg').focus();
+}
+
+/* ---------- Asosiy ko‘rinish ---------- */
+const tabNames = {kassa:'Kassa', sotuvlar:'Sotuvlar', smena:'Smena', ombor:'Ombor', kirim:'Kirim', inventar:'Inventarizatsiya', transfer:'Transfer', xarajat:'Xarajatlar', hisobot:'Hisobotlar', ovoz:'Ovozli yordamchi', tarix:'Tarix', zaxira:'Zaxira', filiallar:'Filiallar', xodimlar:'Xodimlar', profil:'Profil'};
+const tabIcons = {kassa:'🛒', sotuvlar:'🧾', smena:'⏱️', ombor:'📦', kirim:'📥', inventar:'📋', transfer:'🚚', xarajat:'💸', hisobot:'📊', ovoz:'🎙️', tarix:'🕘', zaxira:'💾', filiallar:'🏬', xodimlar:'👥', profil:'⚙️'};
+function render(){
+  const r = R();
+  const bsel = r.all
+    ? `<select id="bsel" aria-label="Filial">${branches.map(b=>`<option value="${b.id}" ${b.id===S.branch?'selected':''}>${esc(b.name)}</option>`).join('')}</select>`
+    : `<span class="who">${esc(bname(S.branch))}</span>`;
+  const gList = groupOrder.filter(g => r.tabs.some(t => grpOf(t) === g));
+  if(!gList.includes(S.grp)) S.grp = gList[0];
+  let curTabs = r.tabs.filter(t => grpOf(t) === S.grp);
+  if(!curTabs.includes(S.tab)) S.tab = curTabs[0];
+  $('app').innerHTML = `
+  <div class="top"><b>${BRAND.logo ? `<img class="av sq" src="${BRAND.logo}" alt="" style="width:30px;height:30px">` : ''}${esc(BRAND.shop)}</b><span class="sp"></span>${bsel}
+    <span class="who net" id="net"></span><button class="btn sm ghost" id="nt" style="color:#fff;border-color:rgba(255,255,255,.4)"></button><span class="who">${avatarHtml(S.user, 28)} ${esc(S.user.name)} · ${esc(r.label)}</span>
+    <button class="btn sm ghost" style="color:#fff;border-color:rgba(255,255,255,.4)" id="out">Chiqish</button></div>
+  ${gList.length > 1 ? `<div class="grps" role="tablist" aria-label="Bo‘limlar">${gList.map(g => `<button class="${g===S.grp?'on':''}" data-grp="${g}"><span class="ic" aria-hidden="true">${groupMeta[g].icon}</span>${groupMeta[g].label}</button>`).join('')}</div>` : ''}
+  <div class="tabs" role="tablist">${curTabs.map(t=>`<button role="tab" class="${t===S.tab?'on':''}" data-tab="${t}"><span class="ic" aria-hidden="true">${tabIcons[t] || ''}</span>${tabNames[t]}${t==='ovoz' ? ' <span class="beta">BETA</span>' : ''}</button>`).join('')}</div>
+  <main id="main"></main>`;
+  $('out').onclick = () => { S.user = null; ssSet(LS.session, null); showLogin(); };
+  $('nt').onclick = () => setOnline(!S.online); updateNet(); if(!bkTimer) startBk();
+  if($('bsel')) $('bsel').onchange = e => { S.branch = e.target.value; render(); };
+  document.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { S.grp = b.dataset.grp; S.tab = r.tabs.find(t => grpOf(t) === S.grp); render(); });
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+  ({kassa:viewKassa, sotuvlar:viewSotuvlar, smena:viewSmena, ombor:viewOmbor, kirim:viewKirim, inventar:viewInventar, transfer:viewTransfer, xarajat:viewXarajat, hisobot:viewHisobot, ovoz:viewOvoz, tarix:viewTarix, zaxira:viewZaxira, filiallar:viewFilial, xodimlar:viewXodim, profil:viewProfil})[S.tab]();
+}
+
+/* ---------- OMBOR ---------- */
+function viewOmbor(){
+  const r = R();
+  const cats = [...new Set(products.map(p=>p.cat))].sort();
+  $('main').innerHTML = `
+  <div id="stats"></div><div id="alerts"></div>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Nomi, artikul yoki barcode bo‘yicha qidirish" value="${esc(S.q)}" aria-label="Qidirish" inputmode="search">
+    <select id="cat" aria-label="Kategoriya"><option value="">Barcha kategoriyalar</option>${cats.map(c=>`<option ${c===S.cat?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <select id="low" aria-label="Qoldiq bo‘yicha"><option value="">Barcha qoldiq</option><option value="1" ${S.low?'selected':''}>Faqat kam va tugagan</option></select>
+    ${r.edit ? '<button class="btn" id="add">+ Yangi mahsulot</button><button class="btn ghost" id="imp">Excel dan yuklash</button>' : ''}
+  </div>
+  <div id="list"></div>`;
+  $('q').oninput = e => { S.q = e.target.value; renderList(); };
+  $('q').onkeydown = e => { if(e.key==='Enter'){ const hit = products.find(p=>p.barcodes.includes(S.q.trim())); if(!hit) toast('Bu barcode bo‘yicha mahsulot topilmadi'); } };
+  $('cat').onchange = e => { S.cat = e.target.value; renderList(); };
+  $('low').onchange = e => { S.low = !!e.target.value; renderList(); };
+  if($('add')) $('add').onclick = () => productForm();
+  if($('imp')) $('imp').onclick = importForm;
+  renderList();
+}
+function renderList(){
+  const r = R(), q = S.q.trim().toLowerCase();
+  const all = products;
+  const zero = all.filter(p=>status(p)==='zero').length, low = all.filter(p=>status(p)==='low').length;
+  const units = all.reduce((a,p)=>a+stockOf(p),0), val = all.reduce((a,p)=>a+stockOf(p)*p.cost,0);
+  $('stats').innerHTML = `<div class="stats">
+    <div class="stat"><small>Mahsulot turlari</small><strong>${fmt(all.length)}</strong></div>
+    <div class="stat"><small>Jami dona</small><strong>${fmt(units)}</strong></div>
+    ${r.cost ? `<div class="stat"><small>Ombor qiymati (kirim narxida)</small><strong>${money(val)}</strong></div>` : ''}
+  </div>`;
+  $('alerts').innerHTML =
+    (zero ? `<div class="alert bad"><b>${zero} ta mahsulot tugagan.</b> Kirim qilish kerak.</div>` : '') +
+    (low ? `<div class="alert warn"><b>${low} ta mahsulot tugayapti.</b> Qoldiq minimal darajadan oshmaydi.</div>` : '');
+  const list = all.filter(p =>
+    (!q || p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || p.barcodes.some(c=>c.includes(q))) &&
+    (!S.cat || p.cat===S.cat) && (!S.low || status(p)!=='ok'));
+  $('list').innerHTML = list.length ? list.map(p => {
+    const st = status(p), s = stockOf(p);
+    const badge = st==='zero' ? '<span class="badge b-zero">Tugagan</span>' : st==='low' ? '<span class="badge b-low">Kam qoldi</span>' : '<span class="badge b-ok">Yetarli</span>';
+    return `<div class="row">
+      <div><div class="nm">${esc(p.name)}</div>
+        <div class="sub">${esc(p.cat)} · artikul: ${esc(p.sku)} · barcode: ${p.barcodes.map(esc).join(', ')}</div></div>
+      <div class="num"><b>${fmt(s)} dona</b><br>${badge}</div>
+      <div class="sub">Sotuv: <b>${money(p.price)}</b>${r.cost ? ` · Kirim: ${money(p.cost)} · Qiymati: ${money(p.cost*s)}` : ''} · Minimal: ${fmt(p.min)}</div>
+      ${r.edit ? `<div class="act"><button class="btn sm ghost" data-lbl="${p.id}">Stiker</button><button class="btn sm ghost" data-edit="${p.id}">Tahrirlash</button></div>` : '<span></span>'}
+    </div>`; }).join('') : '<div class="empty">Hech narsa topilmadi. Qidiruv yoki filtrni o‘zgartiring.</div>';
+  document.querySelectorAll('[data-lbl]').forEach(b => b.onclick = () => labelForm(products.find(p=>p.id==b.dataset.lbl)));
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => productForm(products.find(p=>p.id==b.dataset.edit)));
+}
+
+/* ---------- Artikul va barcode generatsiyasi ---------- */
+const ean13 = d12 => { let t = 0; [...d12].forEach((c, i) => t += +c * (i % 2 ? 3 : 1)); return d12 + ((10 - t % 10) % 10); };
+function genBarcode(){
+  const used = new Set(products.flatMap(p => p.barcodes));
+  for(let n = products.length + 1; ; n++){ const c = ean13('2' + String(n).padStart(11, '0')); if(!used.has(c)) return c; }
+}
+function genSku(){
+  const m = Math.max(0, ...products.map(p => +((/^ART-(\d+)$/.exec(p.sku || '') || [0, 0])[1])));
+  return 'ART-' + String(m + 1).padStart(4, '0');
+}
+function fixSku(){ products.forEach(p => { if(!p.sku) p.sku = genSku(); }); }
+
+/* ---------- Mahsulot formasi ---------- */
+function productForm(p){
+  const isNew = !p, d = $('dlg'); d._warned = false;
+  d.innerHTML = `
+  <form id="pf" method="dialog">
+    <h2 style="margin:0 0 4px">${isNew ? 'Yangi mahsulot' : 'Mahsulotni tahrirlash'}</h2>
+    ${isNew ? `<div style="display:flex;gap:6px;margin:8px 0" role="group" aria-label="Qo‘shish usuli"><button type="button" class="btn sm" id="m1">Oddiy</button><button type="button" class="btn sm ghost" id="m2">Murakkab (razmer, rang...)</button></div>` : ''}
+    <label for="f1">Mahsulot nomi</label><input id="f1" value="${esc(p?.name)}" required>
+    <label for="f8">Artikul (bir nechta tovarda bir xil bo‘lishi mumkin; bo‘sh qoldirsangiz o‘zi yaratiladi)</label>
+    <input id="f8" list="sl" value="${esc(p?.sku)}" placeholder="Masalan: KOLA-05">
+    <datalist id="sl">${[...new Set(products.map(x => x.sku).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <div id="bc1"><label for="f2">Barcode (bo‘sh qoldirsangiz o‘zi yaratiladi; bir nechta bo‘lsa vergul yoki yangi qator bilan ajrating)</label>
+    <textarea id="f2" rows="2">${esc(p?.barcodes.join('\n'))}</textarea></div>
+    <div id="vbox" hidden><div class="sub">Farqlarni yozing, masalan: Razmer — S, M, L; Rang — Qizil, Qora. Har bir kombinatsiya alohida tovar bo‘ladi, artikul hammasiga umumiy.</div>
+      <div id="attrs"></div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="btn sm ghost" id="aadd">+ Farq qo‘shish</button><button type="button" class="btn sm" id="agen">Variantlarni yaratish</button></div>
+      <div class="card" style="margin:12px 0 0;padding:10px 12px"><div class="two"><div><label for="vbq" style="margin-top:0">Hamma variantga bir xil qoldiq (dona)</label><input id="vbq" type="number" min="0" inputmode="numeric" placeholder="Masalan: 10"></div>
+        <div style="display:flex;align-items:end"><button type="button" class="btn sm" id="vbap" style="width:100%">Hammasiga qo‘llash</button></div></div>
+        <div class="sub" style="margin-top:6px">Keyin kerak bo‘lsa, ayrim variantlarning sonini pastda alohida o‘zgartirasiz.</div></div>
+      <div id="vlist"></div></div>
+    <label for="f3">Kategoriya</label><input id="f3" list="cl" value="${esc(p?.cat)}" required>
+    <datalist id="cl">${[...new Set(products.map(x=>x.cat))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+    <div class="two">
+      <div><label for="f4">Kirim narxi (so‘m)</label><input id="f4" type="number" min="0" inputmode="numeric" value="${p?.cost ?? ''}" required></div>
+      <div><label for="f5">Sotuv narxi (so‘m)</label><input id="f5" type="number" min="0" inputmode="numeric" value="${p?.price ?? ''}" required></div>
+      <div><label for="f6">Minimal qoldiq</label><input id="f6" type="number" min="0" inputmode="numeric" value="${p?.min ?? 5}" required></div>
+      ${isNew ? `<div id="q1"><label for="f7">Boshlang‘ich qoldiq (${esc(bname(S.branch))})</label><input id="f7" type="number" min="0" inputmode="numeric" value="0"></div>` : ''}
+    </div>
+    <div class="err" id="pe" role="alert"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button type="button" class="btn ghost" id="pc">Bekor qilish</button>
+      <button type="submit" class="btn">Saqlash</button></div>
+  </form>`;
+  d.showModal();
+  $('pc').onclick = () => d.close();
+  let mode = 'oddiy', attrs = [{n: 'Razmer', v: ''}, {n: 'Rang', v: ''}], variants = [];
+  const combos = l => l.reduce((acc, x) => acc.flatMap(c => x.vals.map(v => [...c, [x.n, v]])), [[]]);
+  const drawAttrs = () => { $('attrs').innerHTML = attrs.map((a, i) => `<div class="two" style="align-items:end"><div><label for="an${i}">Farq nomi</label><input id="an${i}" data-an="${i}" value="${esc(a.n)}" placeholder="Razmer, Rang, Hajm..."></div>
+    <div><label for="av${i}">Qiymatlari (vergul bilan)</label><div style="display:flex;gap:6px"><input id="av${i}" data-av="${i}" value="${esc(a.v)}" placeholder="S, M, L"><button type="button" class="btn sm ghost" data-ad="${i}" aria-label="Farqni olib tashlash">✕</button></div></div></div>`).join(''); };
+  const drawVars = () => { $('vlist').innerHTML = variants.length ? `<div class="sub" style="margin:10px 0 4px">${variants.length} ta variant · jami <b id="vtot">${fmt(variants.reduce((a, v) => a + v.qty, 0))}</b> dona. Barcode bo‘sh bo‘lsa, o‘zi yaratiladi. O‘ng tomonda boshlang‘ich qoldiq.</div>` + variants.map((v, i) =>
+    `<div class="cl"><div class="nm">${esc(v.label)}</div><input style="width:150px" data-vc="${i}" value="${esc(v.code)}" placeholder="Barcode (avto)" aria-label="${esc(v.label)} barcode"><input type="number" min="0" data-vq="${i}" value="${v.qty}" aria-label="${esc(v.label)} soni"></div>`).join('') : ''; };
+  const genVars = () => {
+    const l = attrs.map(a => ({n: a.n.trim(), vals: [...new Set(a.v.split(/[,;\n]/).map(x => x.trim()).filter(Boolean))]})).filter(a => a.n && a.vals.length), old = new Map(variants.map(v => [v.label, v]));
+    variants = l.length ? combos(l).slice(0, 300).map(c => { const label = c.map(x => x[1]).join(' · '); return old.get(label) || {vals: Object.fromEntries(c), label, code: '', qty: Math.max(0, Math.floor(+$('vbq').value || 0))}; }) : [];
+    drawVars(); return variants.length;
+  };
+  const setMode = m => { mode = m; $('bc1').hidden = $('q1').hidden = m === 'murakkab'; $('vbox').hidden = m === 'oddiy'; $('m1').classList.toggle('ghost', m !== 'oddiy'); $('m2').classList.toggle('ghost', m !== 'murakkab'); };
+  if(isNew){
+    drawAttrs(); $('m1').onclick = () => setMode('oddiy'); $('m2').onclick = () => setMode('murakkab');
+    $('aadd').onclick = () => { attrs.push({n: '', v: ''}); drawAttrs(); };
+    $('agen').onclick = () => { $('pe').textContent = genVars() ? '' : 'Kamida bitta farq nomi va qiymatini yozing.'; };
+    $('attrs').oninput = e => { const t = e.target; if(t.dataset.an !== undefined) attrs[+t.dataset.an].n = t.value; if(t.dataset.av !== undefined) attrs[+t.dataset.av].v = t.value; };
+    $('attrs').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); genVars(); } };
+    $('attrs').onclick = e => { const b = e.target.closest('[data-ad]'); if(b){ attrs.splice(+b.dataset.ad, 1); drawAttrs(); } };
+    $('vlist').oninput = e => { const t = e.target; if(t.dataset.vc !== undefined) variants[+t.dataset.vc].code = t.value; if(t.dataset.vq !== undefined){ variants[+t.dataset.vq].qty = Math.max(0, Math.floor(+t.value || 0)); if($('vtot')) $('vtot').textContent = fmt(variants.reduce((a, v) => a + v.qty, 0)); } };
+    $('vbap').onclick = () => {
+      if(!variants.length && !genVars()) return void ($('pe').textContent = 'Avval farq nomi va qiymatlarini yozing, so‘ng variantlarni yarating.');
+      const n = Math.max(0, Math.floor(+$('vbq').value || 0)); variants.forEach(v => v.qty = n); $('pe').textContent = ''; drawVars(); toast(`Hamma variantga ${fmt(n)} dona qo‘yildi`);
+    };
+  }
+  $('pf').onsubmit = e => {
+    e.preventDefault();
+    const name = $('f1').value.trim(), cat = $('f3').value.trim(); let codes = parseCodes($('f2').value), sku = $('f8').value.trim();
+    const cost = +$('f4').value, price = +$('f5').value, min = +$('f6').value;
+    const err = m => { $('pe').textContent = m; };
+    if(!name || !cat) return err('Nom va kategoriyani to‘ldiring.');
+    if(mode === 'murakkab'){
+      if(!variants.length && !genVars()) return err('Variantlarni yarating: farq nomi va qiymatlarini yozing.');
+      if(price < cost && !d._warned){ d._warned = true; return err('Sotuv narxi kirim narxidan past. Agar to‘g‘ri bo‘lsa, «Saqlash» ni yana bosing.'); }
+      const grp = sku || genSku(); let nw = 0, mg = 0;
+      variants.forEach(v => {
+        const vn = name + ' · ' + v.label, vc = parseCodes(v.code), ex = products.find(x => x.name.trim().toLowerCase() === vn.toLowerCase() || x.barcodes.some(c => vc.includes(c)));
+        if(ex){ if(v.qty){ ex.stock[S.branch] = (ex.stock[S.branch] || 0) + v.qty; addLog('kirim', ex, S.branch, v.qty, v.qty * ex.cost, 'Bir xil variant: mavjud qoldiqqa qo‘shildi'); } mg++; return; }
+        const np = {id: nextId++, name: vn, sku: grp, barcodes: vc.length ? vc : [genBarcode()], cat, cost, price, min, stock: {b1: 0, b2: 0}, variant: v.vals};
+        np.stock[S.branch] = v.qty; products.push(np); addLog('yangi', np, S.branch, v.qty, v.qty * cost, 'Variant qo‘shildi');
+        if(v.qty) addLog('kirim', np, S.branch, v.qty, v.qty * cost, 'Boshlang‘ich qoldiq'); nw++;
+      });
+      sfx('ok'); toast(`${nw} ta yangi variant qo‘shildi${mg ? `, ${mg} tasi mavjud qoldiqqa qo‘shildi` : ''}`); d.close(); return render();
+    }
+    const same = products.find(x => x !== p && (x.name.trim().toLowerCase() === name.toLowerCase() || x.barcodes.some(c => codes.includes(c))));
+    if(same && !isNew) return err(`«${same.name}» bilan bir xil nom yoki barcode bor.`);
+    if(same){
+      const add = Math.max(0, Math.floor(+$('f7').value || 0));
+      same.barcodes.push(...codes.filter(c => !same.barcodes.includes(c)));
+      if(add){ same.stock[S.branch] = (same.stock[S.branch] || 0) + add; addLog('kirim', same, S.branch, add, add * same.cost, 'Bir xil tovar: mavjud qoldiqqa qo‘shildi'); }
+      toast(add ? `«${same.name}» allaqachon bor edi: ${fmt(add)} dona qoldiqqa qo‘shildi` : `«${same.name}» allaqachon bor, yangi tovar ochilmadi`);
+      d.close(); return render();
+    }
+    if(!codes.length) codes = [genBarcode()];
+    if(!sku) sku = isNew ? genSku() : (p.sku || genSku());
+    if(price < cost && !d._warned){ d._warned = true; return err('Sotuv narxi kirim narxidan past. Agar to‘g‘ri bo‘lsa, «Saqlash» ni yana bosing.'); }
+    if(isNew){
+      const np = {id:nextId++, name, sku, barcodes:codes, cat, cost, price, min, stock:{b1:0,b2:0}};
+      const init = Math.max(0, Math.floor(+$('f7').value || 0));
+      np.stock[S.branch] = init; products.push(np);
+      addLog('yangi', np, S.branch, init, init*cost, 'Mahsulot qo‘shildi');
+      if(init) addLog('kirim', np, S.branch, init, init*cost, 'Boshlang‘ich qoldiq');
+      toast('Mahsulot qo‘shildi');
+    } else {
+      if(p.cost !== cost || p.price !== price)
+        addLog('narx', p, S.branch, 0, 0, `Kirim: ${fmt(p.cost)} → ${fmt(cost)}; Sotuv: ${fmt(p.price)} → ${fmt(price)}`);
+      if(p.name !== name || p.cat !== cat || p.min !== min || p.sku !== sku || p.barcodes.join() !== codes.join())
+        addLog('tahrir', p, S.branch, 0, 0, 'Mahsulot ma’lumotlari o‘zgartirildi');
+      Object.assign(p, {name, sku, barcodes:codes, cat, cost, price, min});
+      toast('O‘zgarishlar saqlandi');
+    }
+    d.close(); render();
+  };
+}
+
+/* ---------- KIRIM ---------- */
+function viewKirim(){
+  const p = products.find(x => x.id === S.kpid);
+  $('main').innerHTML = `
+  <div class="card">
+    <h2 style="margin:0 0 4px">Omborga kirim</h2>
+    <div class="muted">${esc(bname(S.branch))}. Barcode skanerlang yoki nomini yozing, Enter bosing.</div>
+    <label for="ks">Barcode yoki nomi</label>
+    <input id="ks" value="${esc(S.kq)}" placeholder="Masalan: 73836368" autocomplete="off">
+    <div id="kres"></div>
+  </div>
+  <h3>So‘nggi kirimlar</h3><div id="krec"></div>`;
+  const find = () => {
+    const v = $('ks').value.trim(), lv = v.toLowerCase(); S.kq = v;
+    if(!v) return null;
+    return products.find(x => x.barcodes.includes(v)) || products.find(x => x.name.toLowerCase().includes(lv));
+  };
+  $('ks').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); const f = find(); if(f){ S.kpid = f.id; viewKirim(); setTimeout(()=>$('kq')?.focus(),0);} else toast('Mahsulot topilmadi. Avval Ombor bo‘limida qo‘shing.'); } };
+  if(p){
+    $('kres').innerHTML = `
+    <div class="row" style="margin-top:12px"><div><div class="nm">${esc(p.name)}</div><div class="sub">${p.barcodes.map(esc).join(', ')}</div></div>
+      <div class="num"><b>${fmt(stockOf(p))} dona</b><br><span class="muted">hozirgi qoldiq</span></div></div>
+    <div class="two">
+      <div><label for="kq">Kelgan miqdor (dona)</label><input id="kq" type="number" min="1" inputmode="numeric"></div>
+      <div><label for="kc">Yangi kirim narxi (ixtiyoriy)</label><input id="kc" type="number" min="0" inputmode="numeric" placeholder="${p.cost}"></div>
+    </div>
+    <div class="err" id="ke" role="alert"></div>
+    <button class="btn" id="kok">Kirim qilish</button>`;
+    $('kok').onclick = () => {
+      const qty = Math.floor(+$('kq').value), nc = $('kc').value === '' ? p.cost : +$('kc').value;
+      if(!(qty > 0)) { $('ke').textContent = 'Miqdorni 1 dan katta son bilan kiriting.'; return; }
+      const before = stockOf(p);
+      if(nc !== p.cost){ addLog('narx', p, S.branch, 0, 0, `Kirim narxi: ${fmt(p.cost)} → ${fmt(nc)}`); p.cost = nc; }
+      p.stock[S.branch] = before + qty;
+      addLog('kirim', p, S.branch, qty, qty*nc, `Qoldiq: ${fmt(before)} → ${fmt(before+qty)}`);
+      toast(`${p.name}: +${fmt(qty)} dona kirim qilindi`);
+      S.kpid = null; S.kq = ''; viewKirim();
+    };
+  }
+  const rec = log.filter(l => l.type==='kirim' && l.branch===S.branch).slice(-5).reverse();
+  $('krec').innerHTML = rec.length ? rec.map(logRow).join('') : '<div class="empty">Hali kirim yo‘q.</div>';
+}
+
+/* ---------- TARIX ---------- */
+const typeNames = {sync:'Sinxronlash', inventar:'Inventarizatsiya', transfer:'Transfer', xarajat:'Xarajat', sotuv:'Sotuv', qaytarish:'Qaytarish', bekor:'Bekor qilindi', smena:'Smena', kirim:'Kirim', narx:'Narx o‘zgardi', yangi:'Yangi mahsulot', tahrir:'Tahrir'};
+function logRow(l){
+  const d = l.t.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return `<div class="lg"><span class="tag">${esc(typeNames[l.type]||l.type)}</span>
+    <span><b>${esc(l.pname)}</b>${l.qty ? ` · ${fmt(l.qty)} dona` : ''}${l.sum ? ` · ${money(l.sum)}` : ''}<br><span class="muted">${esc(l.note)}</span></span>
+    <span class="t">${d}<br>${esc(l.user)}<br>${esc(bname(l.branch))}</span></div>`;
+}
+function viewTarix(){
+  const r = R();
+  $('main').innerHTML = `
+  <div class="bar">
+    <select id="lt" aria-label="Operatsiya turi"><option value="">Barcha operatsiyalar</option>${Object.entries(typeNames).map(([k,v])=>`<option value="${k}" ${k===S.lt?'selected':''}>${v}</option>`).join('')}</select>
+    ${r.all ? `<select id="lb" aria-label="Filial"><option value="">Barcha filiallar</option>${branches.map(b=>`<option value="${b.id}" ${b.id===S.lb?'selected':''}>${esc(b.name)}</option>`).join('')}</select>` : ''}
+  </div>
+  <div class="muted" style="margin-bottom:8px">Tarixdagi yozuvlarni o‘chirib yoki o‘zgartirib bo‘lmaydi.</div>
+  <div id="ll"></div>`;
+  const draw = () => {
+    const rows = log.filter(l => (!S.lt || l.type===S.lt) && (r.all ? (!S.lb || l.branch===S.lb) : l.branch===S.branch)).slice().reverse();
+    $('ll').innerHTML = rows.length ? rows.map(logRow).join('') : '<div class="empty">Hali operatsiyalar yo‘q. Kirim yoki mahsulot qo‘shganingizda shu yerda ko‘rinadi.</div>';
+  };
+  $('lt').onchange = e => { S.lt = e.target.value; draw(); };
+  if($('lb')) $('lb').onchange = e => { S.lb = e.target.value; draw(); };
+  draw();
+}
+
+/* ---------- 2-BOSQICH: KASSA, SMENA, QAYTARISH ---------- */
+const shifts = [], sales = [], refunds = [];
+let shiftNo = 1, saleNo = 1001, refNo = 1;
+const pById = id => products.find(p => p.id === id);
+const openShift = () => shifts.find(s => !s.closedAt && s.login === S.user.login && s.branch === S.branch);
+const isCancelled = id => refunds.some(r => r.type === 'cancel' && r.saleId === id);
+const refundedSum = id => refunds.filter(r => r.saleId === id).reduce((a, r) => a + r.amount, 0);
+const returnedQty = (id, pid) => refunds.filter(r => r.saleId === id).flatMap(r => r.items).filter(i => i.pid === pid).reduce((a, i) => a + i.qty, 0);
+const saleNet = s => s.total - refundedSum(s.id);
+const saleProfit = s => s.profit - refunds.filter(r => r.saleId === s.id).flatMap(r => r.items).reduce((a, i) => a + (i.amount - i.cost * i.qty), 0);
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+const sameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+const fdt = d => d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+
+function shiftTotals(sh){
+  const ss = sales.filter(s => s.shiftId === sh.id), rf = refunds.filter(r => r.shiftId === sh.id);
+  const cashS = ss.reduce((a, s) => a + s.cash, 0), cardS = ss.reduce((a, s) => a + s.card, 0);
+  const cashR = rf.filter(r => r.method === 'naqd').reduce((a, r) => a + r.amount, 0);
+  const cardR = rf.filter(r => r.method === 'karta').reduce((a, r) => a + r.amount, 0);
+  return {n: ss.length, cashS, cardS, cashR, cardR, expected: sh.opening + cashS - cashR};
+}
+function totalsHtml(sh, t){
+  const row = (a, b, cls) => `<div class="sumrow ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+  return row('Boshlang‘ich pul', money(sh.opening)) + row('Savdolar soni', fmt(t.n) + ' ta') +
+    row('Naqd tushum', money(t.cashS)) + row('Karta tushum', money(t.cardS)) +
+    (t.cashR ? row('Qaytarilgan (naqd)', '− ' + money(t.cashR)) : '') +
+    (t.cardR ? row('Qaytarilgan (karta)', '− ' + money(t.cardR)) : '') +
+    row('Tizim hisoblagan naqd pul', money(t.expected), 'big') +
+    (sh.closedAt ? row('Haqiqiy naqd pul', money(sh.counted)) +
+      row(sh.diff > 0 ? 'Ortiqcha' : sh.diff < 0 ? 'Kamomad' : 'Farq', sh.diff === 0 ? 'Mos keladi' : money(Math.abs(sh.diff)), 'big') : '');
+}
+
+/* ----- KASSA ----- */
+function calc(){
+  const lines = S.cart.map(c => { const p = pById(c.pid); return {p, qty: c.qty, sum: p.price * c.qty}; });
+  const sub = lines.reduce((a, l) => a + l.sum, 0), v = Math.max(0, +S.dval || 0);
+  const disc = S.dtype === 'pct' ? Math.round(sub * Math.min(100, v) / 100) : Math.min(sub, v);
+  const total = sub - disc, card = Math.min(total, Math.max(0, +S.card || 0)), cash = total - card;
+  const given = +S.given || 0, change = given > cash ? given - cash : 0;
+  return {lines, sub, disc, total, card, cash, given, change};
+}
+function viewKassa(){
+  const sh = openShift();
+  if(!sh){
+    $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Smena ochilmagan</h2>
+      <div class="muted">Savdo qilish uchun avval smenani oching va kassadagi boshlang‘ich pulni kiriting.</div>
+      <p><button class="btn" id="gs">Smenani ochish</button></p></div>`;
+    $('gs').onclick = () => { S.tab = 'smena'; render(); };
+    return;
+  }
+  $('main').innerHTML = `<div class="pos">
+    <section>
+      <label for="ks2" style="margin-top:0">Barcode skanerlang yoki mahsulot nomini yozing</label>
+      <input id="ks2" autocomplete="off" inputmode="search" placeholder="Barcode yoki nomi">
+      <div id="sr" style="margin-top:8px"></div>
+    </section>
+    <section class="card" style="margin:0">
+      <h3 style="margin:0 0 6px">Savat</h3>
+      <div id="cl"></div>
+      <div class="two" style="margin-top:6px">
+        <div><label for="dv">Chegirma</label><div style="display:flex;gap:6px">
+          <input id="dv" type="number" min="0" inputmode="numeric" value="${S.dval || ''}">
+          <select id="dt" style="width:90px" aria-label="Chegirma turi"><option value="pct" ${S.dtype==='pct'?'selected':''}>%</option><option value="sum" ${S.dtype==='sum'?'selected':''}>so‘m</option></select></div></div>
+        <div><label for="cd">Karta orqali (so‘m)</label><input id="cd" type="number" min="0" inputmode="numeric" value="${S.card || ''}"></div>
+        <div><label for="gv">Mijoz bergan naqd (ixtiyoriy)</label><input id="gv" type="number" min="0" inputmode="numeric" value="${S.given || ''}"></div>
+      </div>
+      <div id="ct" style="margin:10px 0"></div>
+      <div style="display:flex;gap:8px"><button class="btn ghost" id="clr">Tozalash</button><button class="btn" id="pb" style="flex:1">To‘lovni qabul qilish</button></div>
+    </section></div>`;
+  showResults('');
+  renderCart();
+  $('ks2').oninput = e => showResults(e.target.value);
+  $('ks2').onkeydown = e => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = e.target.value.trim(); if(!v) return;
+    let hit = products.find(p => p.barcodes.includes(v));
+    if(!hit){ const m = products.filter(p => p.name.toLowerCase().includes(v.toLowerCase())); if(m.length === 1) hit = m[0]; }
+    if(hit){ addToCart(hit); e.target.value = ''; showResults(''); }
+    else { sfx('error'); toast('Mahsulot topilmadi'); }
+  };
+  $('sr').onclick = e => { const b = e.target.closest('[data-add]'); if(b){ addToCart(pById(+b.dataset.add)); $('ks2').focus(); } };
+  $('cl').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    const c = id => S.cart.find(x => x.pid === +id);
+    if(b.dataset.m) setQty(+b.dataset.m, c(b.dataset.m).qty - 1);
+    if(b.dataset.p) setQty(+b.dataset.p, c(b.dataset.p).qty + 1);
+    if(b.dataset.x) setQty(+b.dataset.x, 0);
+  };
+  $('cl').onchange = e => { if(e.target.dataset.q) setQty(+e.target.dataset.q, +e.target.value); };
+  $('dv').oninput = e => { S.dval = e.target.value; updateTotals(); };
+  $('dt').onchange = e => { S.dtype = e.target.value; updateTotals(); };
+  $('cd').oninput = e => { S.card = e.target.value; updateTotals(); };
+  $('gv').oninput = e => { S.given = e.target.value; updateTotals(); };
+  $('clr').onclick = () => { S.cart = []; S.dval = 0; S.card = 0; S.given = 0; viewKassa(); };
+  $('pb').onclick = checkout;
+  $('ks2').focus();
+}
+function showResults(v){
+  v = v.trim().toLowerCase();
+  if(!v){ $('sr').innerHTML = '<div class="empty">Mahsulot qidiring yoki barcode skanerlang.</div>'; return; }
+  const res = products.filter(p => p.name.toLowerCase().includes(v) || (p.sku || '').toLowerCase().includes(v) || p.barcodes.some(c => c.includes(v))).slice(0, 8);
+  $('sr').innerHTML = res.length ? res.map(p => {
+    const s = stockOf(p);
+    return `<div class="row"><div><div class="nm">${esc(p.name)}</div><div class="sub">${p.barcodes.map(esc).join(', ')}</div></div>
+      <div class="num"><b>${money(p.price)}</b><br><span class="sub">${fmt(s)} dona</span></div>
+      <div class="act"><button class="btn sm" data-add="${p.id}" ${s <= 0 ? 'disabled' : ''}>${s <= 0 ? 'Tugagan' : 'Savatga qo‘shish'}</button></div></div>`;
+  }).join('') : '<div class="empty">Bunday mahsulot topilmadi.</div>';
+}
+function addToCart(p){
+  const s = stockOf(p), c = S.cart.find(x => x.pid === p.id);
+  if(s <= 0){ sfx('extra'); return toast(`«${p.name}» omborda qolmagan`); }
+  if(c){ if(c.qty + 1 > s){ sfx('extra'); return toast(`Omborda faqat ${fmt(s)} dona bor`); } c.qty++; }
+  else S.cart.push({pid: p.id, qty: 1});
+  sfx('ok'); renderCart();
+}
+function setQty(pid, n){
+  n = Math.floor(n || 0);
+  const p = pById(pid);
+  if(n <= 0) S.cart = S.cart.filter(c => c.pid !== pid);
+  else { if(n > stockOf(p)){ toast(`Omborda faqat ${fmt(stockOf(p))} dona bor`); n = stockOf(p); } S.cart.find(c => c.pid === pid).qty = n; }
+  renderCart();
+}
+function renderCart(){
+  $('cl').innerHTML = S.cart.length ? S.cart.map(c => {
+    const p = pById(c.pid);
+    return `<div class="cl"><div><div class="nm">${esc(p.name)}</div><div class="sub">${money(p.price)} · omborda ${fmt(stockOf(p))}</div></div>
+      <div class="qty"><button class="btn sm ghost" data-m="${p.id}" aria-label="Kamaytirish">−</button><input data-q="${p.id}" type="number" min="1" value="${c.qty}" inputmode="numeric" aria-label="Miqdor"><button class="btn sm ghost" data-p="${p.id}" aria-label="Ko‘paytirish">+</button></div>
+      <div class="num"><b>${money(p.price * c.qty)}</b><br><button class="btn sm ghost" data-x="${p.id}">Olib tashlash</button></div></div>`;
+  }).join('') : '<div class="empty">Savat bo‘sh. Barcode skanerlang yoki mahsulot qidiring.</div>';
+  updateTotals();
+}
+function updateTotals(){
+  const c = calc(), row = (a, b, cls) => `<div class="sumrow ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+  $('ct').innerHTML = row('Mahsulotlar summasi', money(c.sub)) + (c.disc ? row('Chegirma', '− ' + money(c.disc)) : '') +
+    row('Jami', money(c.total), 'big') + (c.card ? row('Karta', money(c.card)) : '') +
+    row('Naqd to‘lanishi kerak', money(c.cash)) + (c.change ? row('Qaytim', money(c.change), 'big') : '');
+  $('pb').disabled = !c.lines.length;
+}
+function checkout(){
+  if(S.paying) return;                       // takroriy bosishdan himoya
+  const sh = openShift(); if(!sh) return toast('Smena yopilgan. Avval smenani oching.');
+  const c = calc(); if(!c.lines.length) return;
+  for(const l of c.lines) if(l.qty > stockOf(l.p)) return sfx('extra') || toast(`«${l.p.name}»: omborda faqat ${fmt(stockOf(l.p))} dona qolgan`);
+  if(c.given && c.given < c.cash) return toast('Mijoz bergan naqd summa yetarli emas');
+  S.paying = true;
+  try{
+    const items = c.lines.map(l => Object.freeze({pid: l.p.id, name: l.p.name, code: l.p.barcodes[0], qty: l.qty, price: l.p.price, cost: l.p.cost, sum: l.sum}));
+    const cost = items.reduce((a, i) => a + i.cost * i.qty, 0), no = saleNo++;
+    const sale = Object.freeze({id: no, no, t: new Date(), branch: S.branch, login: S.user.login, cashier: S.user.name, shiftId: sh.id,
+      items: Object.freeze(items), subtotal: c.sub, discount: c.disc, total: c.total, cash: c.cash, card: c.card, change: c.change, profit: c.total - cost});
+    sales.push(sale);
+    if(!S.online){ unsynced.add(sale.id); toast('Oflayn: savdo saqlandi, internet qaytganda serverga yuboriladi'); updateNet(); }
+    c.lines.forEach(l => {
+      const before = stockOf(l.p); l.p.stock[S.branch] = before - l.qty;
+      addLog('sotuv', l.p, S.branch, l.qty, c.sub ? Math.round(l.sum * c.total / c.sub) : 0, `Chek № ${no}. Qoldiq: ${fmt(before)} → ${fmt(before - l.qty)}`);
+    });
+    S.cart = []; S.dval = 0; S.card = 0; S.given = 0;
+    sfx('sale'); viewKassa(); showReceipt(sale);
+  } finally { S.paying = false; }
+}
+function showReceipt(s){
+  const d = $('dlg'), r = (a, b, cls) => `<div class="rr ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+  d.innerHTML = `<div id="receipt" class="rc"><div class="c"><b>CHEK № ${s.no}</b><br>${esc(bname(s.branch))}<br>${fdt(s.t)}<br>Kassir: ${esc(s.cashier)}</div><hr>` +
+    s.items.map(i => `<div>${esc(i.name)}</div>${r(`${fmt(i.qty)} × ${fmt(i.price)}`, fmt(i.sum))}`).join('') + '<hr>' +
+    r('Jami', fmt(s.subtotal)) + (s.discount ? r('Chegirma', '−' + fmt(s.discount)) : '') + r('To‘lov summasi', fmt(s.total), 'big') +
+    (s.cash ? r('Naqd', fmt(s.cash)) : '') + (s.card ? r('Karta', fmt(s.card)) : '') + (s.change ? r('Qaytim', fmt(s.change)) : '') +
+    `<div class="c" style="margin-top:8px">Xaridingiz uchun rahmat!</div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="rp">Chop etish</button><button class="btn" id="rx">Yopish</button></div>`;
+  d.showModal(); $('rx').onclick = () => d.close(); $('rp').onclick = () => window.print();
+}
+
+/* ----- SOTUVLAR TARIXI, QAYTARISH, BEKOR QILISH ----- */
+function saleState(s){
+  if(isCancelled(s.id)) return ['b-zero', 'Bekor qilingan'];
+  if(refunds.some(r => r.saleId === s.id)) return ['b-low', 'Qisman qaytarilgan'];
+  return ['b-ok', 'Yakunlangan'];
+}
+function viewSotuvlar(){
+  $('main').innerHTML = `<div class="bar">
+    <input id="sq" type="search" placeholder="Chek raqami yoki mahsulot nomi" value="${esc(S.sq)}" aria-label="Qidirish">
+    <select id="sd" aria-label="Davr"><option value="today" ${S.sd==='today'?'selected':''}>Bugun</option><option value="all" ${S.sd==='all'?'selected':''}>Barcha vaqt</option></select></div>
+    <div class="muted" style="margin-bottom:8px">Qaytarish va bekor qilish asl savdoni o‘chirmaydi, alohida operatsiya sifatida saqlanadi.</div>
+    <div id="sl"></div>`;
+  const draw = () => {
+    const r = R(), q = S.sq.trim().toLowerCase(), now = new Date();
+    const rows = sales.filter(s => s.branch === S.branch && (!r.own || s.login === S.user.login) &&
+      (S.sd === 'all' || sameDay(s.t, now)) &&
+      (!q || String(s.no).includes(q) || s.items.some(i => i.name.toLowerCase().includes(q)))).slice().reverse();
+    $('sl').innerHTML = rows.length ? rows.map(s => {
+      const [cls, lbl] = saleState(s), net = saleNet(s), done = isCancelled(s.id) || s.items.every(i => returnedQty(s.id, i.pid) >= i.qty);
+      return `<div class="row"><div><div class="nm">Chek № ${s.no}</div>
+        <div class="sub">${fdt(s.t)} · ${esc(s.cashier)} · ${s.items.map(i => esc(i.name) + ' ×' + fmt(i.qty)).join(', ')}</div></div>
+        <div class="num"><b>${money(s.total)}</b>${net !== s.total ? `<br><span class="sub">Qoldi: ${money(net)}</span>` : ''}<br><span class="badge ${cls}">${lbl}</span></div>
+        <div class="act"><button class="btn sm ghost" data-rc="${s.id}">Chek</button>
+        ${done ? '' : `<button class="btn sm ghost" data-rt="${s.id}">Qaytarish</button><button class="btn sm ghost" data-cn="${s.id}">Bekor qilish</button>`}</div></div>`;
+    }).join('') : '<div class="empty">Savdolar yo‘q. Kassa bo‘limida savdo qilganingizda shu yerda ko‘rinadi.</div>';
+  };
+  $('sq').oninput = e => { S.sq = e.target.value; draw(); };
+  $('sd').onchange = e => { S.sd = e.target.value; draw(); };
+  $('sl').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    const find = id => sales.find(s => s.id === +id);
+    if(b.dataset.rc) showReceipt(find(b.dataset.rc));
+    if(b.dataset.rt) refundForm(find(b.dataset.rt), 'return');
+    if(b.dataset.cn) refundForm(find(b.dataset.cn), 'cancel');
+  };
+  draw();
+}
+function refundForm(s, mode){
+  const r = R(), d = $('dlg'), cancel = mode === 'cancel';
+  const unit = i => i.price * s.total / (s.subtotal || 1);
+  const rem = s.items.map(i => ({...i, left: i.qty - returnedQty(s.id, i.pid)})).filter(i => i.left > 0);
+  if(!rem.length) return toast('Qaytariladigan mahsulot qolmagan');
+  d.innerHTML = `<form id="rf" method="dialog"><h2 style="margin:0 0 4px">${cancel ? 'Savdoni bekor qilish' : 'Mahsulotni qaytarish'} · Chek № ${s.no}</h2>` +
+    (cancel ? '<div class="muted">Qolgan barcha mahsulotlar omborga qaytadi va pul mijozga qaytariladi.</div>' :
+      rem.map(i => `<div class="cl"><div><div class="nm">${esc(i.name)}</div><div class="sub">Qaytarish mumkin: ${fmt(i.left)} dona</div></div><div></div>
+        <input type="number" min="0" max="${i.left}" value="0" data-rq="${i.pid}" inputmode="numeric" aria-label="${esc(i.name)} miqdori"></div>`).join('')) +
+    `<label for="rm">Pul qaytarish usuli</label><select id="rm"><option value="naqd">Naqd</option><option value="karta">Karta</option></select>
+    <label for="rr">Sababi</label><input id="rr" placeholder="Masalan: mijoz fikridan qaytdi">` +
+    (r.refund ? '' : `<div class="alert warn" style="margin-top:12px">Bu amalni administrator tasdiqlashi kerak.</div>
+      <div class="two"><div><label for="al">Administrator logini</label><input id="al" autocapitalize="none"></div><div><label for="ap">Parol</label><input id="ap" type="password"></div></div>`) +
+    `<div class="err" id="re" role="alert"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" id="rcn">Orqaga</button><button type="submit" class="btn">${cancel ? 'Savdoni bekor qilish' : 'Qaytarishni tasdiqlash'}</button></div></form>`;
+  d.showModal();
+  $('rcn').onclick = () => d.close();
+  $('rf').onsubmit = e => {
+    e.preventDefault();
+    const err = m => { $('re').textContent = m; };
+    let appr = S.user;
+    if(!r.refund){
+      appr = users.find(u => !u.off && u.login === $('al').value.trim() && u.pass === $('ap').value && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
+      if(!appr) return err('Administrator logini yoki paroli noto‘g‘ri.');
+    }
+    const reason = $('rr').value.trim(); if(!reason) return err('Sababni yozing.');
+    let items = [];
+    if(cancel) items = rem.map(i => ({pid: i.pid, name: i.name, qty: i.left, cost: i.cost, amount: Math.round(unit(i) * i.left)}));
+    else for(const i of rem){
+      const q = Math.floor(+document.querySelector(`[data-rq="${i.pid}"]`).value || 0);
+      if(q > i.left) return err(`«${i.name}»: ko‘pi bilan ${fmt(i.left)} dona qaytarish mumkin.`);
+      if(q > 0) items.push({pid: i.pid, name: i.name, qty: q, cost: i.cost, amount: Math.round(unit(i) * q)});
+    }
+    if(!items.length) return err('Qaytariladigan mahsulot miqdorini kiriting.');
+    let amount = items.reduce((a, i) => a + i.amount, 0);
+    if(cancel){ const target = s.total - refundedSum(s.id); items[0].amount += target - amount; amount = target; }
+    const sh = openShift();
+    refunds.push(Object.freeze({id: refNo++, type: cancel ? 'cancel' : 'return', saleId: s.id, t: new Date(), user: S.user.name, approver: appr.name,
+      shiftId: sh ? sh.id : null, items: Object.freeze(items.map(i => Object.freeze(i))), amount, method: $('rm').value, reason}));
+    items.forEach(i => {
+      const p = pById(i.pid), before = p.stock[s.branch] || 0; p.stock[s.branch] = before + i.qty;
+      addLog(cancel ? 'bekor' : 'qaytarish', p, s.branch, i.qty, i.amount, `Chek № ${s.no}. Sabab: ${reason}. Tasdiqladi: ${appr.name}`);
+    });
+    d.close(); toast(`${money(amount)} mijozga qaytariladi`); viewSotuvlar();
+  };
+}
+
+/* ----- SMENA ----- */
+function viewSmena(){
+  const r = R(), sh = openShift();
+  let h = '';
+  if(r.sell){
+    if(!sh) h += `<div class="card"><h2 style="margin:0 0 4px">Smenani ochish</h2>
+      <label for="so">Kassadagi boshlang‘ich pul (so‘m)</label><input id="so" type="number" min="0" inputmode="numeric" value="0">
+      <div class="err" id="se" role="alert"></div><button class="btn" id="sob">Smenani ochish</button></div>`;
+    else h += `<div class="card"><h2 style="margin:0 0 4px">Ochiq smena</h2><div class="muted" style="margin-bottom:8px">Ochilgan: ${fdt(sh.openedAt)}</div>
+      ${totalsHtml(sh, shiftTotals(sh))}
+      <label for="sc">Kassadagi haqiqiy naqd pul (so‘m)</label><input id="sc" type="number" min="0" inputmode="numeric">
+      <div class="err" id="se" role="alert"></div><button class="btn" id="scb">Smenani yopish</button></div>`;
+  }
+  h += '<h3>Smenalar tarixi</h3><div id="shl"></div>';
+  if(r.admin) h += '<h3>Kassirlar hisoboti</h3><div id="crp"></div>';
+  $('main').innerHTML = h;
+  const err = m => { $('se').textContent = m; };
+  if($('sob')) $('sob').onclick = () => {
+    const v = $('so').value; if(v === '' || +v < 0) return err('Boshlang‘ich pulni kiriting (0 ham bo‘lishi mumkin).');
+    const ns = {id: shiftNo++, login: S.user.login, cashier: S.user.name, branch: S.branch, openedAt: new Date(), opening: +v, closedAt: null};
+    shifts.push(ns); addLog('smena', null, S.branch, 0, +v, `Smena ochildi. Boshlang‘ich pul: ${fmt(+v)}`);
+    toast('Smena ochildi'); viewSmena();
+  };
+  if($('scb')) $('scb').onclick = () => {
+    const v = $('sc').value; if(v === '' || +v < 0) return err('Kassadagi haqiqiy pulni kiriting.');
+    const t = shiftTotals(sh);
+    sh.closedAt = new Date(); sh.counted = +v; sh.expected = t.expected; sh.diff = +v - t.expected; Object.freeze(sh);
+    S.cart = []; S.dval = 0; S.card = 0; S.given = 0;
+    addLog('smena', null, S.branch, 0, sh.counted, `Smena yopildi. Kutilgan: ${fmt(sh.expected)}, haqiqiy: ${fmt(sh.counted)}, farq: ${fmt(sh.diff)}`);
+    toast(sh.diff === 0 ? 'Smena yopildi. Kassa mos keldi' : sh.diff > 0 ? `Smena yopildi. Ortiqcha: ${money(sh.diff)}` : `Smena yopildi. Kamomad: ${money(-sh.diff)}`);
+    viewSmena();
+  };
+  const mine = shifts.filter(x => x.branch === S.branch && (!r.own || x.login === S.user.login)).slice().reverse();
+  $('shl').innerHTML = mine.length ? mine.map(x => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(x.cashier)}</b>
+    <span class="badge ${x.closedAt ? (x.diff === 0 ? 'b-ok' : x.diff > 0 ? 'b-low' : 'b-zero') : 'b-ok'}">${x.closedAt ? (x.diff === 0 ? 'Yopilgan · mos' : x.diff > 0 ? 'Yopilgan · ortiqcha' : 'Yopilgan · kamomad') : 'Ochiq'}</span></div>
+    <div class="muted" style="margin-bottom:6px">${fdt(x.openedAt)}${x.closedAt ? ' — ' + fdt(x.closedAt) : ''}</div>${totalsHtml(x, shiftTotals(x))}</div>`).join('')
+    : '<div class="empty">Hali smena ochilmagan.</div>';
+  if(r.admin){
+    const now = new Date(), sellers = users.filter(u => roles[u.role].sell && !u.off);
+    $('crp').innerHTML = sellers.map(u => {
+      const mineS = sales.filter(s => s.login === u.login && s.branch === S.branch);
+      const td = mineS.filter(s => sameDay(s.t, now)), mo = mineS.filter(s => sameMonth(s.t, now));
+      const sum = a => a.reduce((x, s) => x + saleNet(s), 0);
+      return `<div class="row"><div><div class="nm">${esc(u.name)}</div><div class="sub">${esc(roles[u.role].label)}</div></div>
+        <div class="num"><b>${money(sum(td))}</b><br><span class="sub">bugun · ${td.length} ta chek</span></div>
+        <div class="sub" style="grid-column:1/-1">Oylik savdo: <b>${money(sum(mo))}</b> · ${mo.length} ta chek${r.cost ? ` · Oylik foyda: ${money(mo.reduce((x, s) => x + saleProfit(s), 0))}` : ''}</div></div>`;
+    }).join('');
+  }
+}
+
+
+/* ---------- 3-BOSQICH: INVENTARIZATSIYA, TRANSFER, XARAJATLAR ---------- */
+const inventories = [], transfers = [], expenses = [], voided = {};
+let invNo = 1, trNo = 1, exNo = 1;
+const expCats = ['Ijara', 'Ish haqi', 'Kommunal to‘lovlar', 'Transport', 'Boshqa xarajatlar'];
+const findByInput = v => {
+  v = v.trim(); if(!v) return null;
+  const hit = products.find(p => p.barcodes.includes(v));
+  if(hit) return hit;
+  const m = products.filter(p => p.name.toLowerCase().includes(v.toLowerCase()));
+  return m.length === 1 ? m[0] : null;
+};
+const searchList = (v, attr, btn) => {
+  v = v.trim().toLowerCase();
+  if(!v) return '';
+  const res = products.filter(p => p.name.toLowerCase().includes(v) || (p.sku || '').toLowerCase().includes(v) || p.barcodes.some(c => c.includes(v))).slice(0, 6);
+  return res.length ? res.map(p => `<div class="row"><div><div class="nm">${esc(p.name)}</div><div class="sub">${p.barcodes.map(esc).join(', ')} · omborda ${fmt(stockOf(p))}</div></div>
+    <button class="btn sm" ${attr}="${p.id}">${btn}</button></div>`).join('') : '<div class="empty">Bunday mahsulot topilmadi.</div>';
+};
+
+/* ----- INVENTARIZATSIYA ----- */
+const invSummary = inv => {
+  let short = 0, shortSum = 0, over = 0, overSum = 0;
+  (inv.items || []).forEach(i => { if(i.diff < 0){ short += -i.diff; shortSum += -i.diff * i.cost; } else if(i.diff > 0){ over += i.diff; overSum += i.diff * i.cost; } });
+  return {short, shortSum, over, overSum};
+};
+const invStatus = {pending: ['b-low', 'Tasdiq kutilmoqda'], approved: ['b-ok', 'Tasdiqlangan'], rejected: ['b-zero', 'Rad etilgan'], discarded: ['b-zero', 'Bekor qilingan']};
+const prevDiff = (inv, pid) => {
+  const prev = inventories.filter(x => x.branch === inv.branch && x.status === 'approved' && x.id < inv.id).reverse().find(x => x.items.some(i => i.pid === pid));
+  return prev ? prev.items.find(i => i.pid === pid).diff : null;
+};
+function viewInventar(){
+  const r = R(), open = inventories.find(i => i.branch === S.branch && i.status === 'open');
+  let h = '';
+  if(r.stockops){
+    if(!open) h += `<div class="card"><h2 style="margin:0 0 4px">Inventarizatsiya</h2>
+      <div class="muted">${esc(bname(S.branch))} ombori. Natijani administrator tasdiqlaydi. Tasdiqlanmaguncha ombor qoldig‘i o‘zgarmaydi.</div>
+      <div class="row" style="margin-top:10px"><div><div class="nm">Chastniy inventarizatsiya</div><div class="sub">Faqat siz sanagan mahsulotlar tekshiriladi. Sanalmaganlariga tegilmaydi.</div></div><span></span>
+        <div class="act"><button class="btn" id="ist1">Chastniyni boshlash</button></div></div>
+      <div class="row"><div><div class="nm">Umumiy inventarizatsiya</div><div class="sub">Ombordagi barcha mahsulotlar tekshiriladi. Sanalmagan mahsulot yo‘q deb hisoblanadi va kamomad bo‘lib chiqadi.</div></div><span></span>
+        <div class="act"><button class="btn" id="ist2">Umumiyni boshlash</button></div></div></div>`;
+    else h += `<div class="card"><h2 style="margin:0 0 4px">Sanash davom etmoqda · ${open.type === 'umumiy' ? 'Umumiy' : 'Chastniy'} inventarizatsiya № ${open.no}</h2>
+      <div class="muted">Boshladi: ${esc(open.user)}, ${fdt(open.startedAt)}</div>
+      <label for="is">Barcode skanerlang yoki nomini yozing</label>
+      <input id="is" autocomplete="off" inputmode="search" placeholder="Har bir skanerlash +1 dona qo‘shadi">
+      <div id="ir" style="margin-top:8px"></div>
+      <h3 style="margin:14px 0 4px">Sanalgan mahsulotlar</h3><div class="muted" id="ip" style="margin-bottom:6px"></div><div id="ic"></div><div id="iu"></div>
+            <div class="err" id="ie" role="alert"></div>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost" id="idc">Bekor qilish</button><button class="btn" id="ifn" style="flex:1">Sanashni yakunlash</button></div></div>`;
+  }
+  h += '<h3>Inventarizatsiyalar tarixi</h3><div id="ih"></div>';
+  $('main').innerHTML = h;
+  const startInv = type => {
+    inventories.push({id: invNo, no: invNo++, type, branch: S.branch, user: S.user.name, startedAt: new Date(), status: 'open', counts: {}, order: []});
+    viewInventar();
+  };
+  if($('ist1')) $('ist1').onclick = () => startInv('qisman');
+  if($('ist2')) $('ist2').onclick = () => startInv('umumiy');
+  if(open){
+    const addCount = p => { if(open.counts[p.id] === undefined){ open.counts[p.id] = 0; open.order.unshift(p.id); } open.counts[p.id]++; sfx(open.counts[p.id] > (p.stock[open.branch] || 0) ? 'extra' : 'ok'); drawCount(); };
+    const drawCount = () => {
+      $('ic').innerHTML = open.order.length ? open.order.map(id => { const p = pById(id); return `<div class="cl"><div><div class="nm">${esc(p.name)}</div><div class="sub">${esc(p.barcodes[0])}</div></div>
+        <input type="number" min="0" value="${open.counts[id]}" data-cq="${id}" inputmode="numeric" aria-label="${esc(p.name)} soni"><button class="btn sm ghost" data-cx="${id}">Olib tashlash</button></div>`; }).join('')
+        : '<div class="empty">Hali hech narsa sanalmagan. Birinchi mahsulotni skanerlang.</div>';
+      const left = products.filter(p => open.counts[p.id] === undefined);
+      $('ip').textContent = open.type === 'umumiy' ? `Sanalgan: ${open.order.length} / ${products.length} ta mahsulot` : `Sanalgan: ${open.order.length} ta mahsulot. Faqat sanalganlari tekshiriladi.`;
+      $('iu').innerHTML = open.type === 'umumiy' && left.length ? `<details style="margin-top:10px"><summary>Hali sanalmagan: ${left.length} ta mahsulot</summary>${left.map(p => `<div class="sub" style="padding:3px 0">${esc(p.name)} · tizimda ${fmt(p.stock[open.branch] || 0)} dona</div>`).join('')}</details>` : '';
+    };
+    $('is').oninput = e => { $('ir').innerHTML = searchList(e.target.value, 'data-ia', 'Sanash +1'); };
+    $('is').onkeydown = e => {
+      if(e.key !== 'Enter') return; e.preventDefault();
+      const p = findByInput(e.target.value);
+      if(p){ addCount(p); e.target.value = ''; $('ir').innerHTML = ''; } else { sfx('error'); toast('Mahsulot topilmadi'); }
+    };
+    $('ir').onclick = e => { const b = e.target.closest('[data-ia]'); if(b){ addCount(pById(+b.dataset.ia)); $('is').value = ''; $('ir').innerHTML = ''; $('is').focus(); } };
+    $('ic').onchange = e => { if(e.target.dataset.cq){ const n = Math.max(0, Math.floor(+e.target.value || 0)); open.counts[e.target.dataset.cq] = n; drawCount(); } };
+    $('ic').onclick = e => { const b = e.target.closest('[data-cx]'); if(b){ const id = +b.dataset.cx; delete open.counts[id]; open.order = open.order.filter(x => x !== id); drawCount(); } };
+    $('idc').onclick = async () => { if(await ask('Sanashni bekor qilasizmi?', 'Kiritilgan sonlar saqlanmaydi.', 'Ha, bekor qilish', 'Orqaga')){ open.status = 'discarded'; Object.freeze(open); viewInventar(); } };
+    $('ifn').onclick = () => invReview(open);
+    drawCount();
+  }
+  const hist = inventories.filter(i => i.branch === S.branch && i.status !== 'open').slice().reverse();
+  $('ih').innerHTML = hist.length ? hist.map(i => {
+    const [cls, lbl] = invStatus[i.status], s = invSummary(i);
+    return `<div class="row"><div><div class="nm">${i.type === 'umumiy' ? 'Umumiy' : 'Chastniy'} inventarizatsiya № ${i.no}</div><div class="sub">${esc(i.user)} · ${fdt(i.startedAt)}</div>
+      ${i.items ? `<div class="sub">Kamomad: ${fmt(s.short)} dona${r.cost ? ' (' + money(s.shortSum) + ')' : ''} · Ortiqcha: ${fmt(s.over)} dona${r.cost ? ' (' + money(s.overSum) + ')' : ''}</div>` : ''}</div>
+      <div class="num"><span class="badge ${cls}">${lbl}</span></div>
+      ${i.items ? `<div class="act"><button class="btn sm ghost" data-iv="${i.id}">Ko‘rish</button></div>` : ''}</div>`;
+  }).join('') : '<div class="empty">Hali inventarizatsiya o‘tkazilmagan.</div>';
+  $('ih').onclick = e => { const b = e.target.closest('[data-iv]'); if(b) invDetail(inventories.find(x => x.id === +b.dataset.iv)); };
+}
+function invDetail(inv){
+  const r = R(), d = $('dlg'), s = invSummary(inv), [cls, lbl] = invStatus[inv.status];
+  d.innerHTML = `<h2 style="margin:0 0 4px">${inv.type === 'umumiy' ? 'Umumiy' : 'Chastniy'} inventarizatsiya № ${inv.no}</h2>
+    <div class="muted" style="margin-bottom:6px">${esc(bname(inv.branch))} · Sanadi: ${esc(inv.user)} · ${fdt(inv.finishedAt)}</div>
+    <span class="badge ${cls}">${lbl}</span>${inv.approvedBy ? ` <span class="sub">${esc(inv.approvedBy)} · ${fdt(inv.approvedAt)}</span>` : ''}
+    <div class="sumrow" style="margin-top:8px"><span>Kamomad</span><span>${fmt(s.short)} dona${r.cost ? ' · ' + money(s.shortSum) : ''}</span></div>
+    <div class="sumrow"><span>Ortiqcha</span><span>${fmt(s.over)} dona${r.cost ? ' · ' + money(s.overSum) : ''}</span></div>
+    <div style="max-height:46vh;overflow:auto;margin-top:8px">${inv.items.map(i => {
+      const pd = prevDiff(inv, i.pid);
+      return `<div class="cl" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(i.name)}${i.uncounted ? ' <span class="sub">(sanalmagan)</span>' : ''}</div>
+        <div class="sub">Tizim: ${fmt(i.system)} · Sanaldi: ${fmt(i.counted)}${pd !== null ? ` · Oldingi farq: ${pd > 0 ? '+' : ''}${fmt(pd)}` : ''}</div></div>
+        <span class="badge ${i.diff === 0 ? 'b-ok' : i.diff < 0 ? 'b-zero' : 'b-low'}">${i.diff === 0 ? 'Mos' : (i.diff > 0 ? '+' : '') + fmt(i.diff)}</span></div>`; }).join('')}</div>
+    ${inv.status === 'pending' ? `<div class="muted" style="margin-top:8px">Tasdiqlanganda farq joriy qoldiqqa qo‘shiladi, shu oraliqdagi savdolar buzilmaydi.</div>` : ''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      ${inv.status === 'pending' && r.admin ? '<button class="btn ghost" id="ivr">Rad etish</button><button class="btn" id="iva">Tasdiqlash</button>' : ''}
+      <button class="btn ghost" id="ivx">Yopish</button></div>`;
+  d.showModal(); $('ivx').onclick = () => d.close();
+  if($('iva')) $('iva').onclick = () => { approveInv(inv); d.close(); toast('Inventarizatsiya tasdiqlandi, qoldiq yangilandi'); viewInventar(); };
+  if($('ivr')) $('ivr').onclick = () => {
+    inv.status = 'rejected'; inv.approvedBy = S.user.name; inv.approvedAt = new Date(); Object.freeze(inv);
+    addLog('inventar', null, inv.branch, 0, 0, `Inventarizatsiya № ${inv.no} rad etildi`);
+    d.close(); toast('Inventarizatsiya rad etildi. Qoldiq o‘zgarmadi'); viewInventar();
+  };
+}
+
+/* ----- TRANSFER ----- */
+const trStatus = {yolda: ['b-low', 'Yo‘lda'], qabul: ['b-ok', 'Qabul qilingan'], bekor: ['b-zero', 'Bekor qilingan']};
+function viewTransfer(){
+  const r = R();
+  if(S.trdBranch !== S.branch){ S.trd = []; S.trTo = ''; S.trdBranch = S.branch; }
+  const others = branches.filter(b => b.id !== S.branch);
+  if(!S.trTo || S.trTo === S.branch) S.trTo = others[0].id;
+  let h = '';
+  if(r.stockops) h += `<div class="card"><h2 style="margin:0 0 4px">Yangi transfer</h2>
+    <div class="muted">${esc(bname(S.branch))} omboridan yuboriladi. Yuborilgan mahsulot qabul qilinguncha «yo‘lda» holatida turadi.</div>
+    <label for="tt">Qabul qiluvchi filial</label><select id="tt">${others.map(b => `<option value="${b.id}" ${b.id === S.trTo ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select>
+    <label for="ts">Barcode skanerlang yoki nomini yozing</label><input id="ts" autocomplete="off" inputmode="search" placeholder="Mahsulot qo‘shish">
+    <div id="tr" style="margin-top:8px"></div>
+    <h3 style="margin:12px 0 4px">Yuboriladigan mahsulotlar</h3><div id="td"></div>
+    <div class="err" id="te" role="alert"></div>
+    <button class="btn" id="tsend">Transferni yuborish</button></div>`;
+  h += '<h3>Transferlar</h3><div id="tl"></div>';
+  $('main').innerHTML = h;
+  if(r.stockops){
+    const addDraft = p => {
+      if(stockOf(p) <= 0) return toast(`«${p.name}» omborda qolmagan`);
+      const c = S.trd.find(x => x.pid === p.id);
+      if(c){ if(c.qty + 1 > stockOf(p)) return toast(`Omborda faqat ${fmt(stockOf(p))} dona bor`); c.qty++; } else S.trd.push({pid: p.id, qty: 1});
+      drawDraft();
+    };
+    const drawDraft = () => {
+      $('td').innerHTML = S.trd.length ? S.trd.map(c => { const p = pById(c.pid); return `<div class="cl"><div><div class="nm">${esc(p.name)}</div><div class="sub">Omborda: ${fmt(stockOf(p))} dona</div></div>
+        <input type="number" min="1" max="${stockOf(p)}" value="${c.qty}" data-dq="${p.id}" inputmode="numeric" aria-label="${esc(p.name)} miqdori"><button class="btn sm ghost" data-dx="${p.id}">Olib tashlash</button></div>`; }).join('')
+        : '<div class="empty">Mahsulot qo‘shilmagan.</div>';
+    };
+    $('tt').onchange = e => { S.trTo = e.target.value; };
+    $('ts').oninput = e => { $('tr').innerHTML = searchList(e.target.value, 'data-ta', 'Qo‘shish'); };
+    $('ts').onkeydown = e => { if(e.key !== 'Enter') return; e.preventDefault(); const p = findByInput(e.target.value); if(p){ addDraft(p); e.target.value = ''; $('tr').innerHTML = ''; } else toast('Mahsulot topilmadi'); };
+    $('tr').onclick = e => { const b = e.target.closest('[data-ta]'); if(b){ addDraft(pById(+b.dataset.ta)); $('ts').value = ''; $('tr').innerHTML = ''; $('ts').focus(); } };
+    $('td').onchange = e => { if(e.target.dataset.dq){ const p = pById(+e.target.dataset.dq); let n = Math.floor(+e.target.value || 0); if(n > stockOf(p)){ toast(`Omborda faqat ${fmt(stockOf(p))} dona bor`); n = stockOf(p); } if(n <= 0) S.trd = S.trd.filter(x => x.pid !== p.id); else S.trd.find(x => x.pid === p.id).qty = n; drawDraft(); } };
+    $('td').onclick = e => { const b = e.target.closest('[data-dx]'); if(b){ S.trd = S.trd.filter(x => x.pid !== +b.dataset.dx); drawDraft(); } };
+    $('tsend').onclick = sendTransfer;
+    drawDraft();
+  }
+  drawTransfers();
+}
+function sendTransfer(){
+  if(S.paying) return;
+  if(!S.trd.length) return $('te').textContent = 'Kamida bitta mahsulot qo‘shing.';
+  for(const c of S.trd){ const p = pById(c.pid); if(c.qty > stockOf(p)) return $('te').textContent = `«${p.name}»: omborda faqat ${fmt(stockOf(p))} dona bor.`; }
+  S.paying = true;
+  try{
+    const no = trNo++, items = S.trd.map(c => { const p = pById(c.pid); return Object.freeze({pid: p.id, name: p.name, cost: p.cost, qty: c.qty}); });
+    const t = {id: no, no: 'T-' + String(no).padStart(3, '0'), from: S.branch, to: S.trTo, createdBy: S.user.name, createdAt: new Date(), items: Object.freeze(items), status: 'yolda'};
+    transfers.push(t);
+    items.forEach(i => { const p = pById(i.pid), b = stockOf(p); p.stock[t.from] = b - i.qty;
+      addLog('transfer', p, t.from, i.qty, i.qty * i.cost, `${t.no}: ${bname(t.from)} → ${bname(t.to)}, yo‘lda. Qoldiq: ${fmt(b)} → ${fmt(b - i.qty)}`); });
+    S.trd = []; toast(`${t.no} yuborildi`); viewTransfer();
+  } finally { S.paying = false; }
+}
+function drawTransfers(){
+  const r = R(), rows = transfers.filter(t => t.from === S.branch || t.to === S.branch).slice().reverse();
+  $('tl').innerHTML = rows.length ? rows.map(t => {
+    const [cls, lbl] = trStatus[t.status], dif = t.status === 'qabul' && t.items.some(i => t.received[i.pid] !== i.qty);
+    return `<div class="row"><div><div class="nm">${t.no}: ${esc(bname(t.from))} → ${esc(bname(t.to))}</div>
+      <div class="sub">${esc(t.createdBy)} · ${fdt(t.createdAt)}</div>
+      <div class="sub">${t.items.map(i => `${esc(i.name)} ×${fmt(i.qty)}${t.status === 'qabul' && t.received[i.pid] !== i.qty ? ` (qabul: ${fmt(t.received[i.pid])})` : ''}`).join(', ')}</div></div>
+      <div class="num"><span class="badge ${dif ? 'b-low' : cls}">${dif ? 'Qabul · farq bor' : lbl}</span>
+      ${t.status === 'qabul' ? `<br><span class="sub">${esc(t.receivedBy)} · ${fdt(t.receivedAt)}</span>` : ''}</div>
+      ${t.status === 'yolda' && r.stockops ? `<div class="act">
+        ${t.from === S.branch ? `<button class="btn sm ghost" data-tc="${t.id}">Bekor qilish</button>` : ''}
+        ${t.to === S.branch ? `<button class="btn sm" data-tr="${t.id}">Qabul qilish</button>` : ''}</div>` : ''}</div>`;
+  }).join('') : '<div class="empty">Transferlar yo‘q. Yuqoridan yangi transfer yarating.</div>';
+  $('tl').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.tr) receiveForm(transfers.find(t => t.id === +b.dataset.tr));
+    if(b.dataset.tc) cancelTransfer(transfers.find(t => t.id === +b.dataset.tc));
+  };
+}
+async function cancelTransfer(t){
+  if(!(await ask(`${t.no} bekor qilinsinmi?`, 'Mahsulotlar yuboruvchi omborga qaytadi.', 'Ha, bekor qilish', 'Orqaga'))) return;
+  t.items.forEach(i => { const p = pById(i.pid), b = p.stock[t.from] || 0; p.stock[t.from] = b + i.qty;
+    addLog('transfer', p, t.from, i.qty, i.qty * i.cost, `${t.no} bekor qilindi, mahsulot omborga qaytdi. Qoldiq: ${fmt(b)} → ${fmt(b + i.qty)}`); });
+  t.status = 'bekor'; t.cancelledBy = S.user.name; Object.freeze(t); toast(`${t.no} bekor qilindi`); viewTransfer();
+}
+function receiveForm(t){
+  const d = $('dlg');
+  d.innerHTML = `<form id="rcf" method="dialog"><h2 style="margin:0 0 4px">${t.no} ni qabul qilish</h2>
+    <div class="muted">Haqiqatda kelgan miqdorni kiriting. Farq bo‘lsa, tizim uni kam yoki ortiqcha deb belgilaydi.</div>
+    ${t.items.map(i => `<div class="cl"><div><div class="nm">${esc(i.name)}</div><div class="sub">Yuborilgan: ${fmt(i.qty)} dona</div></div><div></div>
+      <input type="number" min="0" value="${i.qty}" data-rv="${i.pid}" inputmode="numeric" aria-label="${esc(i.name)} qabul miqdori"></div>`).join('')}
+    <div class="err" id="rce" role="alert"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" id="rcn">Orqaga</button><button type="submit" class="btn">Qabulni tasdiqlash</button></div></form>`;
+  d.showModal(); $('rcn').onclick = () => d.close();
+  $('rcf').onsubmit = e => {
+    e.preventDefault();
+    const got = {};
+    for(const i of t.items){ const v = document.querySelector(`[data-rv="${i.pid}"]`).value; if(v === '' || +v < 0) return $('rce').textContent = 'Barcha miqdorlarni kiriting.'; got[i.pid] = Math.floor(+v); }
+    t.items.forEach(i => {
+      const p = pById(i.pid), b = p.stock[t.to] || 0, n = got[i.pid]; p.stock[t.to] = b + n;
+      const diff = n - i.qty;
+      addLog('transfer', p, t.to, n, n * i.cost, `${t.no} qabul qilindi. ${diff < 0 ? 'KAM keldi: ' + fmt(-diff) : diff > 0 ? 'ORTIQCHA keldi: ' + fmt(diff) : 'Miqdor mos'}. Qoldiq: ${fmt(b)} → ${fmt(b + n)}`);
+    });
+    t.received = got; t.status = 'qabul'; t.receivedBy = S.user.name; t.receivedAt = new Date(); Object.freeze(t);
+    d.close(); toast(`${t.no} qabul qilindi`); viewTransfer();
+  };
+}
+
+/* ----- XARAJATLAR ----- */
+function viewXarajat(){
+  const r = R(), now = new Date();
+  if(!S.xm) S.xm = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  $('main').innerHTML = `
+  <div class="bar"><input id="xm" type="month" value="${S.xm}" aria-label="Oy"></div>
+  <div id="xs"></div>
+  ${r.expense ? `<div class="card"><h2 style="margin:0 0 4px">Xarajat qo‘shish</h2>
+    <div class="two"><div><label for="xd">Sana</label><input id="xd" type="date" value="${today}"></div>
+    <div><label for="xc">Kategoriya</label><select id="xc">${expCats.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+    <div><label for="xa">Summa (so‘m)</label><input id="xa" type="number" min="1" inputmode="numeric"></div>
+    <div><label for="xn">Izoh</label><input id="xn" placeholder="Masalan: oktyabr oyi ijarasi"></div></div>
+    <div class="err" id="xe" role="alert"></div><button class="btn" id="xadd">Xarajatni saqlash</button></div>` : ''}
+  <h3>Xarajatlar ro‘yxati</h3><div id="xl"></div>`;
+  $('xm').onchange = e => { S.xm = e.target.value || S.xm; viewXarajat(); };
+  const [yy, mm] = S.xm.split('-').map(Number), inMonth = d => d.getFullYear() === yy && d.getMonth() === mm - 1;
+  const list = expenses.filter(x => x.branch === S.branch && inMonth(x.t)).slice().sort((a, b) => b.t - a.t);
+  const active = list.filter(x => !voided[x.id]);
+  const total = active.reduce((a, x) => a + x.amount, 0);
+  const byCat = expCats.map(c => [c, active.filter(x => x.cat === c).reduce((a, x) => a + x.amount, 0)]).filter(x => x[1] > 0);
+  const profit = sales.filter(s => s.branch === S.branch && inMonth(s.t)).reduce((a, s) => a + saleProfit(s), 0);
+  const row = (a, b, cls) => `<div class="sumrow ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+  $('xs').innerHTML = `<div class="card">${r.cost ? row('Savdodan foyda', money(profit)) : ''}${row('Xarajatlar', '− ' + money(total))}
+    ${r.cost ? row('Sof foyda', money(profit - total), 'big') : ''}
+    ${byCat.length ? '<div class="sub" style="margin-top:8px">' + byCat.map(([c, v]) => `${esc(c)}: ${money(v)}`).join(' · ') + '</div>' : ''}</div>`;
+  $('xl').innerHTML = list.length ? list.map(x => {
+    const v = voided[x.id];
+    return `<div class="row" ${v ? 'style="opacity:.6"' : ''}><div><div class="nm" ${v ? 'style="text-decoration:line-through"' : ''}>${esc(x.cat)}</div>
+      <div class="sub">${x.t.toLocaleDateString('ru-RU')} · ${esc(x.user)}${x.note ? ' · ' + esc(x.note) : ''}</div>
+      ${v ? `<div class="sub">Bekor qilingan: ${esc(v.by)}. Sabab: ${esc(v.reason)}</div>` : ''}</div>
+      <div class="num"><b>${money(x.amount)}</b></div>
+      ${r.expense && !v ? `<div class="act"><button class="btn sm ghost" data-xv="${x.id}">Bekor qilish</button></div>` : ''}</div>`;
+  }).join('') : '<div class="empty">Bu oyda xarajat kiritilmagan.</div>';
+  $('xl').onclick = async e => {
+    const b = e.target.closest('[data-xv]'); if(!b) return;
+    const reason = await askText('Xarajatni bekor qilish', 'Sababi'); if(!reason) return;
+    const x = expenses.find(z => z.id === +b.dataset.xv);
+    voided[x.id] = Object.freeze({by: S.user.name, reason, t: new Date()});
+    addLog('xarajat', null, x.branch, 0, x.amount, `Xarajat bekor qilindi (${x.cat}). Sabab: ${reason}`);
+    toast('Xarajat bekor qilindi'); viewXarajat();
+  };
+  if($('xadd')) $('xadd').onclick = () => {
+    const a = Math.round(+$('xa').value), dt = $('xd').value, err = m => { $('xe').textContent = m; };
+    if(!dt) return err('Sanani tanlang.');
+    if(!(a > 0)) return err('Summani kiriting.');
+    const x = Object.freeze({id: exNo++, t: new Date(dt + 'T12:00:00'), branch: S.branch, cat: $('xc').value, amount: a, note: $('xn').value.trim(), user: S.user.name});
+    expenses.push(x);
+    addLog('xarajat', null, x.branch, 0, a, `${x.cat}${x.note ? ': ' + x.note : ''}`);
+    S.xm = dt.slice(0, 7); toast('Xarajat saqlandi'); viewXarajat();
+  };
+}
+
+
+/* ---------- 4-BOSQICH: HISOBOT, EXCEL/PDF, OVOZ, OFLAYN, ZAXIRA ---------- */
+const unsynced = new Set(), snapshots = [];
+let bkTimer = null;
+const DAY = 86400000;
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function rangeOf(k){
+  const now = new Date(), t0 = startOfDay(now);
+  if(k === 'today') return [t0, new Date(+t0 + DAY)];
+  if(k === 'week') return [new Date(+t0 - 6 * DAY), new Date(+t0 + DAY)];
+  if(k === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1)];
+  return [new Date(0), new Date(8.64e15)];
+}
+const rangeNames = {today: 'Bugun', week: 'Oxirgi 7 kun', month: 'Shu oy', all: 'Barcha vaqt'};
+
+/* ----- Hisob-kitob ----- */
+function periodStats(b, [from, to]){
+  const all = sales.filter(s => s.branch === b && s.t >= from && s.t < to), live = all.filter(s => !isCancelled(s.id));
+  const gross = all.reduce((a, s) => a + s.total, 0), refSum = all.reduce((a, s) => a + refundedSum(s.id), 0);
+  const ids = new Set(all.map(s => s.id)), rf = refunds.filter(x => ids.has(x.saleId));
+  const cash = all.reduce((a, s) => a + s.cash, 0) - rf.filter(x => x.method === 'naqd').reduce((a, x) => a + x.amount, 0);
+  const card = all.reduce((a, s) => a + s.card, 0) - rf.filter(x => x.method === 'karta').reduce((a, x) => a + x.amount, 0);
+  const profit = all.reduce((a, s) => a + saleProfit(s), 0);
+  const exp = expenses.filter(x => x.branch === b && !voided[x.id] && x.t >= from && x.t < to).reduce((a, x) => a + x.amount, 0);
+  return {n: live.length, gross, refSum, revenue: gross - refSum, disc: live.reduce((a, s) => a + s.discount, 0),
+    units: all.reduce((a, s) => a + s.items.reduce((x, i) => x + i.qty - returnedQty(s.id, i.pid), 0), 0), cash, card, profit, exp, net: profit - exp};
+}
+function productSales(b, [from, to]){
+  const m = new Map(products.map(p => [p.id, 0]));
+  sales.filter(s => s.branch === b && s.t >= from && s.t < to).forEach(s => s.items.forEach(i => m.set(i.pid, (m.get(i.pid) || 0) + i.qty - returnedQty(s.id, i.pid))));
+  return products.map(p => ({p, qty: m.get(p.id) || 0})).sort((a, c) => c.qty - a.qty);
+}
+const statBox = (a, b) => `<div class="stat"><small>${a}</small><strong>${b}</strong></div>`;
+const rrow = (a, b, cls) => `<div class="sumrow ${cls || ''}"><span>${a}</span><span>${b}</span></div>`;
+
+/* ----- HISOBOT ----- */
+function viewHisobot(){
+  const r = R(), rng = rangeOf(S.rp), st = periodStats(S.branch, rng);
+  const td = periodStats(S.branch, rangeOf('today')), wk = periodStats(S.branch, rangeOf('week')), mo = periodStats(S.branch, rangeOf('month'));
+  const units = products.reduce((a, p) => a + stockOf(p), 0), vc = products.reduce((a, p) => a + stockOf(p) * p.cost, 0), vp = products.reduce((a, p) => a + stockOf(p) * p.price, 0);
+  const tp = productSales(S.branch, rng), top = tp.filter(x => x.qty > 0).slice(0, 5), bottom = tp.slice().reverse().slice(0, 5);
+  const low = products.filter(p => status(p) !== 'ok');
+  $('main').innerHTML = `
+  <div class="bar"><select id="rpp" aria-label="Davr">${Object.entries(rangeNames).map(([k, v]) => `<option value="${k}" ${k === S.rp ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="bar">
+    <button class="btn sm ghost" data-ex="ombor">Excel: Ombor</button><button class="btn sm ghost" data-ex="sotuv">Excel: Sotuvlar</button>
+    <button class="btn sm ghost" data-ex="xarajat">Excel: Xarajatlar</button><button class="btn sm ghost" data-ex="tarix">Excel: Tarix</button>
+    <button class="btn sm" data-pdf="day">PDF: Kunlik hisobot</button><button class="btn sm" data-pdf="month">PDF: Oylik hisobot</button></div>
+  <h3>Savdo · ${rangeNames[S.rp]} · ${esc(bname(S.branch))}</h3>
+  <div class="stats">${statBox('Umumiy savdo', money(st.gross))}${statBox('Qaytarilgan', money(st.refSum))}${statBox('Chegirmalar', money(st.disc))}
+    ${statBox('Sof tushum', money(st.revenue))}${statBox('Cheklar soni', fmt(st.n))}${statBox('Sotilgan mahsulot', fmt(st.units) + ' dona')}
+    ${statBox('Naqd tushum', money(st.cash))}${statBox('Karta tushum', money(st.card))}</div>
+  <h3>Foyda</h3>
+  <div class="card">${rrow('Bugungi foyda', money(td.profit))}${rrow('Haftalik foyda (7 kun)', money(wk.profit))}${rrow('Oylik foyda', money(mo.profit))}
+    <div style="height:8px"></div>${rrow('Tushum (' + rangeNames[S.rp].toLowerCase() + ')', money(st.revenue))}${rrow('Savdodan foyda', money(st.profit))}
+    ${rrow('Xarajatlar', '− ' + money(st.exp))}${rrow('Sof foyda', money(st.net), 'big')}
+    <div class="sub" style="margin-top:6px">Foyda mahsulot tannarxi, chegirmalar va qaytarishlarni hisobga olib hisoblanadi.</div></div>
+  ${r.all ? `<h3>Filiallar bo‘yicha · ${rangeNames[S.rp]}</h3>${branches.map(b => { const x = periodStats(b.id, rng);
+    return `<div class="row"><div><div class="nm">${esc(b.name)}</div><div class="sub">Tushum: ${money(x.revenue)} · Foyda: ${money(x.profit)} · Xarajat: ${money(x.exp)}</div></div><div class="num"><b>${money(x.net)}</b><br><span class="sub">sof foyda</span></div></div>`; }).join('')}` : ''}
+  <h3>Ombor hisoboti · ${esc(bname(S.branch))}</h3>
+  <div class="stats">${statBox('Jami mahsulot', fmt(units) + ' dona')}${statBox('Kirim narxida qiymati', money(vc))}${statBox('Sotuv narxida qiymati', money(vp))}${statBox('Kam qoldiqli', fmt(low.length) + ' ta')}</div>
+  <div class="two" style="gap:14px">
+    <div><h3>Eng ko‘p sotilayotgan</h3>${top.length ? top.map((x, i) => `<div class="sumrow"><span>${i + 1}. ${esc(x.p.name)}</span><span>${fmt(x.qty)} dona</span></div>`).join('') : '<div class="muted">Bu davrda sotuv yo‘q.</div>'}</div>
+    <div><h3>Eng kam sotilayotgan</h3>${bottom.map((x, i) => `<div class="sumrow"><span>${i + 1}. ${esc(x.p.name)}</span><span>${fmt(x.qty)} dona</span></div>`).join('')}</div></div>
+  <h3>Kam qoldiqli mahsulotlar</h3>
+  ${low.length ? low.map(p => `<div class="sumrow"><span>${esc(p.name)}</span><span>${fmt(stockOf(p))} dona <span class="badge ${status(p) === 'zero' ? 'b-zero' : 'b-low'}">${status(p) === 'zero' ? 'Tugagan' : 'Kam'}</span></span></div>`).join('') : '<div class="muted">Kam qoldiqli mahsulot yo‘q.</div>'}`;
+  $('rpp').onchange = e => { S.rp = e.target.value; viewHisobot(); };
+  $('main').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.ex) exportKind(b.dataset.ex);
+    if(b.dataset.pdf) printReport(b.dataset.pdf);
+  };
+}
+
+/* ----- EXCEL / PDF ----- */
+function download(name, blob){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function exportRows(file, sheet, rows){
+  if(!rows.length) return toast('Yuklab olish uchun ma’lumot yo‘q');
+  if(window.XLSX){
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheet);
+    XLSX.writeFile(wb, file + '.xlsx'); toast('Excel fayl yuklab olindi');
+  } else {
+    const keys = Object.keys(rows[0]), cell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const csv = '\ufeff' + [keys.map(cell).join(',')].concat(rows.map(x => keys.map(k => cell(x[k])).join(','))).join('\r\n');
+    download(file + '.csv', new Blob([csv], {type: 'text/csv;charset=utf-8'})); toast('Excel kutubxonasi yuklanmadi, CSV fayl yuklab olindi (Excel ochadi)');
+  }
+}
+function exportKind(k){
+  const r = R(), b = S.branch, d = x => x.toLocaleString('ru-RU'), tag = new Date().toISOString().slice(0, 10);
+  if(k === 'ombor') exportRows('ombor-' + tag, 'Ombor', products.map(p => {
+    const o = {'Mahsulot': p.name, 'Artikul': p.sku, 'Barcode': p.barcodes.join(', '), 'Kategoriya': p.cat};
+    if(r.cost) o['Kirim narxi'] = p.cost; o['Sotuv narxi'] = p.price; o['Qoldiq'] = stockOf(p); o['Minimal qoldiq'] = p.min;
+    if(r.cost) o['Umumiy qiymat (kirim)'] = stockOf(p) * p.cost; return o; }));
+  if(k === 'sotuv') exportRows('sotuvlar-' + tag, 'Sotuvlar', sales.filter(s => s.branch === b).map(s => ({
+    'Chek': s.no, 'Sana': d(s.t), 'Kassir': s.cashier, 'Mahsulotlar': s.items.map(i => i.name + ' x' + i.qty).join('; '), 'Jami': s.total, 'Chegirma': s.discount,
+    'Naqd': s.cash, 'Karta': s.card, 'Qaytarilgan': refundedSum(s.id), 'Holat': saleState(s)[1], 'Foyda': saleProfit(s)})));
+  if(k === 'xarajat') exportRows('xarajatlar-' + tag, 'Xarajatlar', expenses.filter(x => x.branch === b).map(x => ({
+    'Sana': x.t.toLocaleDateString('ru-RU'), 'Kategoriya': x.cat, 'Summa': x.amount, 'Izoh': x.note, 'Kiritdi': x.user, 'Holat': voided[x.id] ? 'Bekor qilingan' : 'Faol'})));
+  if(k === 'tarix') exportRows('tarix-' + tag, 'Tarix', log.filter(l => l.branch === b).map(l => ({
+    'Sana': d(l.t), 'Tur': typeNames[l.type] || l.type, 'Mahsulot': l.pname, 'Miqdor': l.qty, 'Summa': l.sum, 'Xodim': l.user, 'Izoh': l.note})));
+}
+function printReport(kind){
+  const r = R(), d = $('dlg'), rng = rangeOf(kind === 'day' ? 'today' : 'month'), now = new Date();
+  const title = kind === 'day' ? 'Kunlik hisobot' : 'Oylik hisobot', when = kind === 'day' ? now.toLocaleDateString('ru-RU') : now.toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'});
+  const ids = r.all ? branches.map(b => b.id) : [S.branch];
+  d.innerHTML = `<div id="printarea" class="rc" style="font-family:inherit"><h2 style="margin:0">${title}</h2><div class="muted">${when} · tayyorladi: ${esc(S.user.name)}</div>` +
+    ids.map(id => {
+      const x = periodStats(id, rng), tp = productSales(id, rng).filter(t => t.qty > 0).slice(0, 5);
+      return `<h3>${esc(bname(id))}</h3>${rrow('Umumiy savdo', money(x.gross))}${rrow('Qaytarilgan', money(x.refSum))}${rrow('Chegirmalar', money(x.disc))}${rrow('Sof tushum', money(x.revenue))}
+        ${rrow('Cheklar soni', fmt(x.n))}${rrow('Sotilgan mahsulot', fmt(x.units) + ' dona')}${rrow('Naqd', money(x.cash))}${rrow('Karta', money(x.card))}
+        ${rrow('Savdodan foyda', money(x.profit))}${rrow('Xarajatlar', '− ' + money(x.exp))}${rrow('Sof foyda', money(x.net), 'big')}
+        ${tp.length ? '<div class="sub" style="margin-top:6px"><b>Eng ko‘p sotilgan:</b> ' + tp.map(t => esc(t.p.name) + ' (' + fmt(t.qty) + ')').join(', ') + '</div>' : ''}`;
+    }).join('') + `</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="pdx">Yopish</button><button class="btn" id="pdp">PDF sifatida saqlash / chop etish</button></div>
+    <div class="sub" style="margin-top:6px">Chop etish oynasida «PDF sifatida saqlash» ni tanlang.</div>`;
+  d.showModal(); $('pdx').onclick = () => d.close(); $('pdp').onclick = () => window.print();
+}
+
+
+/* ----- BOSHLOVCHI PANELI: filiallar va xodimlar (faqat boshlovchi) ----- */
+const staffRoles = ['filial', 'omborchi', 'kassir', 'viewer'];
+const roleDesc = {filial: 'Filialni boshqaradi: kassa, ombor, xarajat, hisobot', omborchi: 'Faqat ombor, kirim, inventarizatsiya, transfer', kassir: 'Faqat kassa va o‘z smenasi', viewer: 'Faqat hisobotlarni ko‘radi, o‘zgartira olmaydi'};
+const roleOpts = sel => staffRoles.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(roles[k].label)}</option>`).join('');
+const branchOpts = sel => branches.map(b => `<option value="${b.id}" ${b.id === sel ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
+function viewFilial(){
+  if(!R().owner) return;
+  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Yangi filial qo‘shish</h2>
+    <label for="fn">Filial nomi</label><input id="fn" placeholder="Masalan: Sergeli filiali">
+    <div class="err" id="fe" role="alert"></div><button class="btn" id="fadd">Filial qo‘shish</button></div>
+    <h3>Filiallar (${branches.length})</h3>` + branches.map(b => `<div class="row"><div><div class="nm">${esc(b.name)}</div>
+    <div class="sub">Xodimlar: ${users.filter(u => u.branch === b.id && !u.off).length} · Cheklar: ${sales.filter(x => x.branch === b.id).length}</div></div>
+    <button class="btn sm ghost" data-fr="${b.id}">Nomini o‘zgartirish</button></div>`).join('');
+  $('fadd').onclick = () => {
+    const n = $('fn').value.trim();
+    if(!n) return $('fe').textContent = 'Filial nomini yozing.';
+    if(branches.some(b => b.name.toLowerCase() === n.toLowerCase())) return $('fe').textContent = 'Bunday filial allaqachon bor.';
+    branches.push({id: 'b' + (Math.max(0, ...branches.map(b => +b.id.slice(1))) + 1), name: n});
+    toast('Filial qo‘shildi: ' + n); render();
+  };
+  $('main').onclick = async e => {
+    const b = e.target.closest('[data-fr]'); if(!b) return;
+    const br = branches.find(x => x.id === b.dataset.fr);
+    if(await ask('Filial nomini o‘zgartirish', `<label for="rn">Yangi nom</label><input id="rn" value="${esc(br.name)}">`, 'Saqlash')){
+      const n = $('rn').value.trim(); if(!n) return toast('Nom bo‘sh bo‘lmasin');
+      br.name = n; toast('Saqlandi'); render();
+    }
+  };
+}
+function viewXodim(){
+  if(!R().owner) return;
+  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Yangi xodim akkaunti</h2>
+    <label for="xn">Ism</label><input id="xn"><label for="xl">Login</label><input id="xl" autocapitalize="none"><label for="xp">Parol (kamida 4 belgi)</label><input id="xp" type="password">
+    <label for="xr">Rol</label><select id="xr">${roleOpts('kassir')}</select><div class="sub" id="xd"></div>
+    <label for="xb">Filial</label><select id="xb">${branchOpts(S.branch)}</select>
+    <div class="err" id="xe" role="alert"></div><button class="btn" id="xadd">Akkaunt ochish</button></div>
+    <h3>Xodimlar (${users.length})</h3>` + users.map(u => `<div class="row"><div><div class="nm">${esc(u.name)}${u.off ? ' · o‘chirilgan' : ''}</div>
+    <div class="sub">${esc(u.login)} · ${esc(roles[u.role].label)} · ${esc(bname(u.branch))}</div></div>
+    ${u.role === 'super' ? '' : `<div><button class="btn sm ghost" data-eu="${esc(u.login)}">Tahrirlash</button> <button class="btn sm ghost" data-ou="${esc(u.login)}">${u.off ? 'Yoqish' : 'O‘chirish'}</button></div>`}</div>`).join('');
+  const dd = () => $('xd').textContent = roleDesc[$('xr').value]; dd(); $('xr').onchange = dd;
+  $('xadd').onclick = () => {
+    const n = $('xn').value.trim(), l = $('xl').value.trim(), p = $('xp').value, er = m => $('xe').textContent = m;
+    if(!n || !l) return er('Ism va loginni yozing.');
+    if(p.length < 4) return er('Parol kamida 4 belgi bo‘lsin.');
+    if(users.some(u => u.login.toLowerCase() === l.toLowerCase())) return er('Bu login band.');
+    users.push({login: l, pass: p, name: n, role: $('xr').value, branch: $('xb').value});
+    toast('Akkaunt ochildi: ' + l); viewXodim();
+  };
+  $('main').onclick = async e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.ou){ const u = users.find(x => x.login === b.dataset.ou); u.off = !u.off; toast(u.off ? 'Akkaunt o‘chirildi' : 'Akkaunt yoqildi'); return viewXodim(); }
+    if(!b.dataset.eu) return;
+    const u = users.find(x => x.login === b.dataset.eu);
+    if(await ask('Xodimni tahrirlash', `<label for="eu-n">Ism</label><input id="eu-n" value="${esc(u.name)}"><label for="eu-r">Rol</label><select id="eu-r">${roleOpts(u.role)}</select>
+      <label for="eu-b">Filial</label><select id="eu-b">${branchOpts(u.branch)}</select><label for="eu-p">Yangi parol (o‘zgartirmasangiz bo‘sh qoldiring)</label><input id="eu-p" type="password">`, 'Saqlash')){
+      const n = $('eu-n').value.trim(), p = $('eu-p').value;
+      if(!n) return toast('Ism bo‘sh bo‘lmasin'); if(p && p.length < 4) return toast('Parol kamida 4 belgi bo‘lsin');
+      u.name = n; u.role = $('eu-r').value; u.branch = $('eu-b').value; if(p) u.pass = p; toast('Saqlandi'); viewXodim();
+    }
+  };
+}
+
+
+/* ----- DO‘KON SOZLAMALARI, SAQLASH, SOZLASH OYNASI, PROFIL ----- */
+const BRAND = {shop: 'Savdo tizimi', tagline: '', color: '#12424f', lcolor: '#12424f', demo: true, set: false};
+const palette = [['#12424f', 'Zumrad'], ['#1d4ed8', 'Ko‘k'], ['#6d28d9', 'Binafsha'], ['#be123c', 'Qizil'], ['#15803d', 'Yashil'], ['#b45309', 'Qahrabo'], ['#0e7490', 'Moviy'], ['#c2410c', 'To‘q sariq'], ['#be185d', 'Pushti'], ['#334155', 'Kulrang']];
+const lcol = () => BRAND.lcolor || BRAND.color;
+const getColor = name => $(name + '-c').value;
+const lwStyle = () => matchMedia('(prefers-color-scheme:dark)').matches ? '' : `--teal:${lcol()};--teal2:color-mix(in srgb, ${lcol()} 72%, #fff)`;
+document.addEventListener('change', e => { const t = e.target; if(t.matches && t.matches('.sw input[type=radio]')){ const c = t.closest('.sw').querySelector('input[type=color]'); if(c) c.value = t.value; } });
+const LS = {brand: 'savdo:brand', data: 'savdo:data', session: 'savdo:session'};
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch(e) { return false; } };
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch(e) { return null; } };
+const ssSet = (k, v) => { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch(e) {} };
+function b64decode(str){
+  str = String(str).replace(/-/g, '+').replace(/_/g, '/'); while(str.length % 4) str += '=';
+  const bin = atob(str), bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function stripShopLink(){ if(/#s=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); }
+function applyShopLink(){
+  const m = location.hash.match(/#s=([^&]+)/); if(!m) return false;
+  stripShopLink();
+  let cfg; try { cfg = b64decode(m[1]); } catch(e) { return false; }
+  if(!cfg || !cfg.shop || !cfg.login || !cfg.pass || String(cfg.pass).length < 4) return false;
+  const owner = {login: String(cfg.login), pass: String(cfg.pass), name: cfg.owner || cfg.login, role: 'super', branch: 'b1'};
+  Object.assign(BRAND, {shop: cfg.shop, tagline: cfg.tagline || '', color: cfg.color || palette[0][0], lcolor: cfg.lcolor || cfg.color || palette[0][0], demo: false, set: true, lid: String(cfg.lid || ''), sid: BRAND.sid || Math.random().toString(36).slice(2, 10) + Date.now().toString(36)});
+  users.splice(0, users.length, owner); branches.splice(0, branches.length, {id: 'b1', name: cfg.branch || 'Asosiy filial'});
+  [products, log, sales, refunds, shifts, inventories, transfers, expenses].forEach(a => a.splice(0, a.length));
+  Object.keys(voided).forEach(k => delete voided[k]); unsynced.clear();
+  saveBrand(); saveData();
+  return true;
+}
+const saveBrand = () => lsSet(LS.brand, JSON.stringify(BRAND)), saveData = () => lsSet(LS.data, makeBackup());
+function applyBrand(){
+  document.title = BRAND.shop;
+  let ic = document.querySelector('link[rel=icon]'); if(!ic){ ic = document.createElement('link'); ic.rel = 'icon'; document.head.appendChild(ic); }
+  if(BRAND.logo) ic.href = BRAND.logo;
+  if(matchMedia('(prefers-color-scheme:dark)').matches) return;
+  const st = document.documentElement.style; st.setProperty('--teal', BRAND.color); st.setProperty('--teal2', `color-mix(in srgb, ${BRAND.color} 72%, #fff)`);
+  document.querySelector('meta[name=theme-color]').content = BRAND.color;
+}
+const swatches = (sel, name = 'bc') => `<div class="sw" role="radiogroup" aria-label="Rang">${palette.map(([c, n]) => `<label class="sw1" title="${n}"><input type="radio" name="${name}" value="${c}" ${c === sel ? 'checked' : ''} aria-label="${n}"><span style="background:${c}"></span></label>`).join('')}
+  <label class="sw1 cpk" title="O‘zingiz tanlang"><input type="color" id="${name}-c" value="${sel}" aria-label="O‘z rangingiz"><span>🎨</span></label></div>`;
+const initial = n => (String(n).trim().charAt(0) || '?').toUpperCase();
+const avatarHtml = (u, z) => u.avatar ? `<img class="av" src="${u.avatar}" alt="" style="width:${z}px;height:${z}px">` : `<span class="av" style="width:${z}px;height:${z}px;font-size:${Math.round(z * .45)}px">${esc(initial(u.name))}</span>`;
+const brandPane = (logo, title, sub) => `<aside class="lb" ${BRAND.set && BRAND.bg ? `style="background-image:linear-gradient(150deg,color-mix(in srgb,${lcol()} 84%,transparent),color-mix(in srgb,${lcol()} 52%,transparent)),url(${BRAND.bg});background-size:cover;background-position:center"` : ''}>
+  <i class="blob b1"></i><i class="blob b2"></i><div class="logo" aria-hidden="true">${BRAND.set && BRAND.logo ? `<img src="${BRAND.logo}" alt="">` : esc(logo)}</div>
+  <h1 class="shine">${esc(title)}</h1><p id="tg" data-t="${esc(sub)}" aria-label="${esc(sub)}"></p>
+  <ul class="feat"><li>Kassa va smena</li><li>Ombor va inventarizatsiya</li><li>Hisobot va foyda</li><li>Oflayn ishlaydi</li></ul></aside>`;
+function typeIn(el){
+  if(!el) return; const t = el.dataset.t;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches){ el.textContent = t; return; }
+  let i = 0; el.classList.add('typing');
+  const id = setInterval(() => { if(!document.body.contains(el)) return clearInterval(id); el.textContent = t.slice(0, ++i); if(i >= t.length){ clearInterval(id); el.classList.remove('typing'); } }, 32);
+}
+function readImg(file, max, q){
+  return new Promise((res, rej) => {
+    if(!file || !file.type.startsWith('image/')) return rej();
+    const fr = new FileReader();
+    fr.onload = () => { const im = new Image(); im.onload = () => {
+      const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(q ? c.toDataURL('image/jpeg', q) : c.toDataURL('image/png')); }; im.onerror = rej; im.src = fr.result; };
+    fr.onerror = rej; fr.readAsDataURL(file);
+  });
+}
+const mediaCard = (id, title, note, pv, has) => `<div class="card"><h2 style="margin:0 0 2px">${title}</h2><div class="sub" style="margin-bottom:10px">${note}</div>
+  <div class="upl">${pv}<label class="btn sm">Rasm tanlash<input class="vh" id="${id}" type="file" accept="image/*"></label>${has ? `<button class="btn sm ghost" id="${id}x">O‘chirish</button>` : ''}</div></div>`;
+const mediaCards = (u, r) => mediaCard('uav', 'Profil rasmi', 'Yuqori panelda sizning ismingiz yonida ko‘rinadi.', `<div class="pv">${u.avatar ? `<img src="${u.avatar}" alt="">` : esc(initial(u.name))}</div>`, !!u.avatar)
+  + (r.owner ? mediaCard('ulg', 'Do‘kon logotipi', 'Kirish oynasida, yuqori panelda va brauzer belgisida chiqadi. PNG shaffof fon bilan yaxshi ko‘rinadi.', `<div class="pv">${BRAND.logo ? `<img src="${BRAND.logo}" alt="" style="object-fit:contain">` : esc(initial(BRAND.shop))}</div>`, !!BRAND.logo)
+    + mediaCard('ubg', 'Kirish oynasi foni', 'Kirish oynasining chap tomoniga fon rasm. Rang ustiga yarim shaffof qoplanadi.', `<div class="pv wide">${BRAND.bg ? `<img src="${BRAND.bg}" alt="">` : 'Rasm yo‘q'}</div>`, !!BRAND.bg) : '');
+function showSetup(){
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane('★', 'Xush kelibsiz!', 'Do‘kon ma’lumotlarini bir marta kiriting. Shundan keyin tizim shu do‘kon nomi bilan ochiladi.')}
+  <section class="lf"><form id="sf" autocomplete="off"><h2>Boshlang‘ich sozlash</h2><div class="muted">Bu oyna faqat birinchi ishga tushirishda chiqadi.</div>
+    <label for="sn">Do‘kon nomi</label><input id="sn" required placeholder="Masalan: Baraka Market">
+    <label for="st">Qisqa tavsif (ixtiyoriy)</label><input id="st">
+    <label>Tashqi dizayn rangi (kirish oynasi)</label>${swatches(palette[0][0], 'lc')}
+    <label>Ichki dizayn rangi (kassa, ombor, hisobot)</label>${swatches(palette[0][0], 'bc')}
+    <label for="so">Egasining ismi</label><input id="so" required>
+    <label for="sl">Egasining logini</label><input id="sl" autocapitalize="none" required>
+    <label for="sp">Parol (kamida 4 belgi)</label><input id="sp" type="password" required>
+    <label for="sb">Birinchi filial nomi</label><input id="sb" required value="Asosiy filial">
+    <label class="chk"><input type="radio" name="sd" value="empty" checked> Bo‘sh tizim (haqiqiy do‘kon uchun)</label>
+    <label class="chk"><input type="radio" name="sd" value="demo"> Demo ma’lumotlar bilan (namoyish uchun)</label>
+    <div class="err" id="se2" role="alert"></div><button class="btn" style="width:100%">Boshlash</button></form></section></div>`;
+  $('sf').onsubmit = e => {
+    e.preventDefault();
+    const v = id => $(id).value.trim(), demo = document.querySelector('[name=sd]:checked').value === 'demo', owner = {login: v('sl'), pass: $('sp').value, name: v('so'), role: 'super', branch: 'b1'};
+    if(owner.pass.length < 4) return $('se2').textContent = 'Parol kamida 4 belgi bo‘lsin.';
+    if(demo && users.slice(1).some(u => u.login === owner.login)) return $('se2').textContent = 'Bu login demo hisoblar bilan to‘qnashadi, boshqasini tanlang.';
+    Object.assign(BRAND, {shop: v('sn'), tagline: v('st'), color: getColor('bc'), lcolor: getColor('lc'), demo, set: true, sid: BRAND.sid || Math.random().toString(36).slice(2, 10) + Date.now().toString(36)});
+    if(demo){ Object.assign(users[0], owner); branches[0].name = v('sb'); }
+    else {
+      users.splice(0, users.length, owner); branches.splice(0, branches.length, {id: 'b1', name: v('sb')});
+      [products, log, sales, refunds, shifts, inventories, transfers, expenses].forEach(a => a.splice(0, a.length));
+      Object.keys(voided).forEach(k => delete voided[k]); unsynced.clear();
+    }
+    applyBrand(); saveBrand(); saveData(); showLogin();
+  };
+  typeIn($('tg')); $('sn').focus();
+}
+function showNoAccess(){
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane('🔒', 'Havola kerak', 'Bu tizim faqat shaxsiy havola orqali ochiladi.')}
+  <section class="lf"><h2>Sizda hali havola yo‘q</h2><div class="muted">Ushbu tizimni taqdim etgan shaxsdan o‘zingizning do‘koningiz uchun shaxsiy havolani so‘rang. Havolani shu brauzerda bir marta ochganingizda tizim avtomatik sozlanadi va keyingi safar to‘g‘ridan to‘g‘ri kirish oynasi chiqadi.</div></section></div>`;
+  typeIn($('tg'));
+}
+function viewProfil(){
+  const u = S.user, r = R();
+  $('main').innerHTML = mediaCards(u, r) + soundCard() + `<div class="card"><h2 style="margin:0 0 4px">Mening profilim</h2><div class="sub">${esc(r.label)} · ${esc(bname(u.branch))}</div>
+    <label for="pn">Ism</label><input id="pn" value="${esc(u.name)}">
+    <label for="pl">Login</label><input id="pl" value="${esc(u.login)}" autocapitalize="none">
+    <label for="pw">Yangi parol (o‘zgartirmasangiz bo‘sh qoldiring)</label><input id="pw" type="password" autocomplete="new-password">
+    <label for="pc">Joriy parol (tasdiqlash uchun)</label><input id="pc" type="password">
+    <div class="err" id="pre" role="alert"></div><button class="btn" id="psave">Saqlash</button></div>
+  ${r.owner ? `${VENDOR.url ? `<div class="alert warn">Xizmat ko‘rsatuvchiga yuboriladi: do‘kon nomi, qurilma turi, faollik vaqti, bugungi cheklar soni va tushum. Parollar va xaridorlar ma’lumoti yuborilmaydi.${lastPing ? ' Oxirgi yuborish: ' + fdt(lastPing) : ''}</div>` : ''}<div class="card"><h2 style="margin:0 0 4px">Do‘kon sozlamalari</h2>
+    <label for="bs">Do‘kon nomi</label><input id="bs" value="${esc(BRAND.shop)}"><label for="bt">Qisqa tavsif</label><input id="bt" value="${esc(BRAND.tagline)}">
+    <label>Tashqi dizayn rangi (kirish oynasi)</label>${swatches(lcol(), 'lc')}
+    <label>Ichki dizayn rangi (kassa, ombor, hisobot)</label>${swatches(BRAND.color, 'bc')}<button class="btn" id="bsave" style="margin-top:14px">Saqlash</button></div>
+    <div class="card"><h2 style="margin:0 0 4px">Tizimni qayta sozlash</h2><div class="sub">Hamma ma’lumot (savdo, ombor, xodimlar) o‘chadi. Shundan keyin tizimdan foydalanish uchun administratordan yangi shaxsiy havola kerak bo‘ladi.</div>
+    <button class="btn sm ghost" id="breset" style="margin-top:10px">Hammasini o‘chirib, qayta sozlash</button></div>` : ''}`;
+  const sv = () => lsSet('savdo:snd', JSON.stringify(SND));
+  $('sdo').onchange = e => { SND.on = e.target.checked; sv(); };
+  $('sdv').oninput = e => { SND.vol = +e.target.value; sv(); }; $('sdv').onchange = () => sfx('ok');
+  document.querySelectorAll('[data-snd]').forEach(b => b.onclick = () => { const w = SND.on; SND.on = true; sfx(b.dataset.snd); SND.on = w; });
+  const bind = (id, max, q, apply) => {
+    const i = $(id); if(!i) return;
+    i.onchange = async () => { try { apply(await readImg(i.files[0], max, q)); toast(saveBrand() && saveData() ? 'Rasm saqlandi' : 'Rasm saqlanmadi: brauzer xotirasi to‘la'); applyBrand(); render(); } catch(e) { toast('Rasmni o‘qib bo‘lmadi'); } };
+    const x = $(id + 'x'); if(x) x.onclick = () => { apply(null); saveBrand(); saveData(); applyBrand(); render(); };
+  };
+  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; });
+  if(r.owner){ bind('ulg', 256, 0, v => BRAND.logo = v || ''); bind('ubg', 1400, .72, v => BRAND.bg = v || ''); }
+  $('psave').onclick = () => {
+    const n = $('pn').value.trim(), l = $('pl').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
+    if(!n || !l) return er('Ism va login bo‘sh bo‘lmasin.');
+    if($('pc').value !== u.pass) return er('Joriy parol noto‘g‘ri.');
+    if(np && np.length < 4) return er('Yangi parol kamida 4 belgi bo‘lsin.');
+    if(users.some(x => x !== u && x.login.toLowerCase() === l.toLowerCase())) return er('Bu login band.');
+    shifts.forEach(x => { if(x.login === u.login && !Object.isFrozen(x)) x.login = l; });
+    u.name = n; u.login = l; if(np) u.pass = np; saveData(); toast('Profil saqlandi'); render();
+  };
+  if(r.owner){
+    $('bsave').onclick = () => {
+      const n = $('bs').value.trim(); if(!n) return toast('Do‘kon nomini yozing');
+      Object.assign(BRAND, {shop: n, tagline: $('bt').value.trim(), color: getColor('bc'), lcolor: getColor('lc')});
+      applyBrand(); saveBrand(); toast('Saqlandi'); render();
+    };
+    $('breset').onclick = async () => {
+      if(await ask('Qayta sozlash', 'Hamma ma’lumot o‘chadi. Davom etasizmi?', 'Ha, o‘chirish')){
+        BRAND.set = false; try { localStorage.removeItem(LS.brand); localStorage.removeItem(LS.data); } catch(e) {} location.reload();
+      }
+    };
+  }
+}
+/* ----- Xizmat ko‘rsatuvchi bilan aloqa (Google Sheets monitoring) ----- */
+const VENDOR = {url: 'https://script.google.com/macros/s/AKfycbzIgwM_SXY94so6KESPDOyx0sWxP82pZXpYw8CtX6LgLn1rHrpJUrbpWXekO30zTNOLrQ/exec', every: 300000};   /* Apps Script manzilini shu yerga qo‘ying */
+let lastPing = null, lastLogin = null;
+function ping(event){
+  if(!VENDOR.url || !BRAND.set || !S.online) return;
+  try {
+  const rg = rangeOf('today'), st = branches.map(b => periodStats(b.id, rg)), last = sales.reduce((m, x) => x.t > m ? x.t : m, 0);
+  const body = {sid: BRAND.sid, lid: BRAND.lid || '', shop: BRAND.shop, ver: '5', device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'telefon' : 'kompyuter', event, branches: branches.length, users: users.filter(u => !u.off).length, products: products.length,
+    salesToday: st.reduce((a, x) => a + x.n, 0), revenueToday: st.reduce((a, x) => a + x.revenue, 0), lastSale: last ? new Date(last).toISOString() : '', lastLogin: lastLogin ? lastLogin.toISOString() : ''};
+  fetch(VENDOR.url, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(body)}).then(() => { lastPing = new Date(); }).catch(() => {});
+  } catch(e) {}
+}
+
+/* ----- Tovarlarni Excel/CSV dan yuklash ----- */
+function parseCsv(t){
+  t = t.replace(/^\ufeff/, ''); const l1 = t.split('\n')[0], dl = (l1.match(/;/g) || []).length > (l1.match(/,/g) || []).length ? ';' : ',';
+  const out = []; let row = [], c = '', q = false;
+  for(let i = 0; i < t.length; i++){ const ch = t[i];
+    if(q){ if(ch === '"'){ if(t[i + 1] === '"'){ c += '"'; i++; } else q = false; } else c += ch; }
+    else if(ch === '"') q = true;
+    else if(ch === dl){ row.push(c); c = ''; }
+    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && t[i + 1] === '\n') i++; row.push(c); out.push(row); row = []; c = ''; }
+    else c += ch; }
+  if(c || row.length){ row.push(c); out.push(row); } return out;
+}
+async function readTable(f){
+  if(/\.csv$/i.test(f.name)) return parseCsv(await f.text());
+  if(!window.XLSX) throw new Error('Excel kutubxonasi yuklanmadi (internet kerak). Faylni CSV qilib saqlab, qayta tanlang.');
+  const wb = XLSX.read(await f.arrayBuffer()); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
+}
+function importRows(rows){
+  const al = {name: ['nomi', 'nom', 'mahsulot', 'tovar', 'name'], sku: ['artikul', 'sku'], code: ['barcode', 'shtrix', 'shtrixkod'], cat: ['kategoriya', 'guruh', 'category'], cost: ['kirim narxi', 'kirim', 'tannarx', 'cost'], price: ['sotuv narxi', 'sotuv', 'narx', 'price'], min: ['minimal qoldiq', 'minimal', 'min'], qty: ['qoldiq', 'miqdor', 'soni', 'qty']};
+  const head = (rows.shift() || []).map(h => String(h).trim().toLowerCase()), ix = {};
+  for(const k in al) ix[k] = head.findIndex(h => al[k].includes(h));
+  if(ix.name < 0) throw new Error('«Nomi» ustuni topilmadi. Namuna faylga qarang.');
+  const g = (r, k) => ix[k] < 0 ? '' : String(r[ix[k]] ?? '').trim(), n = (r, k) => Math.max(0, Math.floor(+g(r, k).replace(/\s/g, '').replace(',', '.') || 0));
+  let neu = 0, merged = 0, bad = 0;
+  rows.forEach(r => {
+    const name = g(r, 'name'); if(!name){ if(r.some(x => String(x).trim())) bad++; return; }
+    const codes = parseCodes(g(r, 'code')), qty = n(r, 'qty');
+    const ex = products.find(x => x.name.trim().toLowerCase() === name.toLowerCase() || x.barcodes.some(c => codes.includes(c)));
+    if(ex){ ex.barcodes.push(...codes.filter(c => !ex.barcodes.includes(c))); if(qty){ ex.stock[S.branch] = (ex.stock[S.branch] || 0) + qty; addLog('kirim', ex, S.branch, qty, qty * ex.cost, 'Importdan qoldiqqa qo‘shildi'); } merged++; return; }
+    const np = {id: nextId++, name, sku: g(r, 'sku') || genSku(), barcodes: codes.length ? codes : [genBarcode()], cat: g(r, 'cat') || 'Boshqa', cost: n(r, 'cost'), price: n(r, 'price'), min: ix.min < 0 ? 5 : n(r, 'min'), stock: {b1: 0, b2: 0}};
+    np.stock[S.branch] = qty; products.push(np); addLog('yangi', np, S.branch, qty, qty * np.cost, 'Importdan qo‘shildi');
+    if(qty) addLog('kirim', np, S.branch, qty, qty * np.cost, 'Boshlang‘ich qoldiq (import)'); neu++;
+  });
+  render(); return `Tayyor. Yangi tovar: ${neu}. Qoldiqqa qo‘shildi: ${merged}. O‘tkazib yuborilgan qator: ${bad}.`;
+}
+function importForm(){
+  const d = $('dlg');
+  d.innerHTML = `<h2 style="margin:0 0 4px">Tovarlarni Excel / CSV dan yuklash</h2><div class="sub">Ustunlar: Nomi, Artikul, Barcode, Kategoriya, Kirim narxi, Sotuv narxi, Minimal qoldiq, Qoldiq. Artikul va barcode bo‘sh bo‘lsa, o‘zi yaratiladi. Nomi yoki barcodi bir xil tovar mavjud qoldiqqa qo‘shiladi. Qoldiq ${esc(bname(S.branch))} ga yoziladi.</div>
+    <div class="upl" style="margin-top:12px"><label class="btn sm">Fayl tanlash<input class="vh" id="imf" type="file" accept=".xlsx,.xls,.csv"></label><button class="btn sm ghost" id="imt">Namuna yuklab olish</button></div>
+    <div id="imr" class="sub" style="margin-top:10px" role="status"></div><div style="text-align:right;margin-top:12px"><button class="btn ghost" id="imx">Yopish</button></div>`;
+  d.showModal(); $('imx').onclick = () => d.close();
+  $('imt').onclick = () => download('tovarlar-namuna.csv', new Blob(['\ufeffNomi,Artikul,Barcode,Kategoriya,Kirim narxi,Sotuv narxi,Minimal qoldiq,Qoldiq\r\nMisol tovar,,,Ichimliklar,4500,6500,10,24\r\n'], {type: 'text/csv;charset=utf-8'}));
+  $('imf').onchange = async e => { const f = e.target.files[0]; if(!f) return; try { $('imr').textContent = importRows(await readTable(f)); } catch(x) { $('imr').textContent = x.message || 'Faylni o‘qib bo‘lmadi.'; } };
+}
+
+/* ----- Barcode stiker (EAN-13) ----- */
+const EL = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'], EPAR = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+function eanBits(c){
+  const R = EL.map(x => x.replace(/[01]/g, m => m === '0' ? '1' : '0')), G = R.map(x => [...x].reverse().join(''));
+  let b = '101'; [...c.slice(1, 7)].forEach((d, i) => b += (EPAR[+c[0]][i] === 'L' ? EL : G)[+d]); b += '01010'; [...c.slice(7)].forEach(d => b += R[+d]); return b + '101';
+}
+const eanSvg = c => { if(!(/^\d{13}$/.test(c) && ean13(c.slice(0, 12)) === c)) return `<div style="font:12px monospace;padding:14px 0">${esc(c)}</div>`; const b = eanBits(c);
+  return `<svg viewBox="0 0 ${b.length} 40" width="140" height="44" preserveAspectRatio="none" fill="#000" aria-hidden="true">${[...b].map((x, i) => x === '1' ? `<rect x="${i}" width="1" height="40"/>` : '').join('')}</svg><div style="font:11px monospace;letter-spacing:1px">${c}</div>`; };
+function labelForm(p){
+  const d = $('dlg');
+  d.innerHTML = `<h2 style="margin:0 0 4px">Stiker chop etish · ${esc(p.name)}</h2><label for="lq">Nechta stiker</label><input id="lq" type="number" min="1" max="200" value="12">
+    <div id="printarea" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px;color:#000;background:#fff;padding:6px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="lx">Yopish</button><button class="btn" id="lp">Chop etish</button></div>`;
+  const draw = () => { const n = Math.min(200, Math.max(1, +$('lq').value || 1));
+    $('printarea').innerHTML = Array(n).fill(`<div style="border:1px dashed #999;border-radius:4px;padding:5px;text-align:center;break-inside:avoid;font:12px sans-serif"><b>${esc(p.name)}</b><br>${eanSvg(p.barcodes[0])}<div><b style="font-size:15px">${money(p.price)}</b> <span style="font-size:10px">${esc(p.sku || '')}</span></div></div>`).join(''); };
+  d.showModal(); draw(); $('lq').oninput = draw; $('lx').onclick = () => d.close(); $('lp').onclick = () => window.print();
+}
+
+/* ----- Ovozlar ----- */
+const SND = {on: true, vol: .6};
+let actx = null;
+function tone(f, t, d, type, g){
+  const o = actx.createOscillator(), v = actx.createGain(); o.type = type; o.frequency.value = f;
+  v.gain.setValueAtTime(.0001, t); v.gain.exponentialRampToValueAtTime(Math.max(.0002, g * SND.vol), t + .012); v.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(v); v.connect(actx.destination); o.start(t); o.stop(t + d + .03);
+}
+function sfx(kind){
+  if(!SND.on) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if(actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime, P = {
+      ok: () => { tone(1568, t, .07, 'sine', .45); tone(2093, t + .06, .1, 'sine', .45); },
+      error: () => { tone(150, t, .22, 'sawtooth', .5); tone(110, t + .24, .38, 'sawtooth', .5); },
+      extra: () => { [660, 990, 660, 990].forEach((f, i) => tone(f, t + i * .13, .12, 'square', .3)); },
+      sale: () => { [1046, 1318, 1568, 2093].forEach((f, i) => tone(f, t + i * .07, .22, 'triangle', .5)); }
+    }; (P[kind] || P.ok)();
+  } catch(e) {}
+}
+const soundCard = () => `<div class="card"><h2 style="margin:0 0 4px">Ovozlar</h2><div class="sub">Skaner va kassa ovozlari. Shu kompyuter uchun saqlanadi.</div>
+  <label class="chk"><input type="checkbox" id="sdo" ${SND.on ? 'checked' : ''}> Ovozlar yoqilgan</label>
+  <label for="sdv">Balandligi</label><input id="sdv" type="range" min="0.1" max="1" step="0.05" value="${SND.vol}">
+  <div class="bar" style="margin-top:10px"><button type="button" class="btn sm ghost" data-snd="ok">Normal tovar</button><button type="button" class="btn sm ghost" data-snd="error">Xato kod</button><button type="button" class="btn sm ghost" data-snd="extra">Ortiqcha / yetmaydi</button><button type="button" class="btn sm ghost" data-snd="sale">Savdo tugadi</button></div></div>`;
+
+function boot(){
+  const b = lsGet(LS.brand);
+  if(b){ try { Object.assign(BRAND, JSON.parse(b)); } catch(e) {} }
+  const d = lsGet(LS.data); if(d && BRAND.set){ try { restoreBackup(d); } catch(e) {} }
+  let linked = false;
+  if(!BRAND.set) linked = applyShopLink(); else stripShopLink();
+  if(!BRAND.sid){ BRAND.sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); if(BRAND.set) saveBrand(); }
+  try { Object.assign(SND, JSON.parse(lsGet('savdo:snd') || '{}')); } catch(e) {}
+  fixSku(); applyBrand(); ping(linked ? 'ulandi' : 'ochildi'); setInterval(() => ping('davriy'), VENDOR.every);
+  setInterval(() => { if(BRAND.set) saveData(); }, 3000);
+  addEventListener('pagehide', () => { if(BRAND.set) saveData(); });
+  const savedLogin = BRAND.set ? ssGet(LS.session) : null;
+  const su = savedLogin ? users.find(x => x.login === savedLogin && !x.off) : null;
+  if(su){ S.user = su; S.branch = su.branch; S.tab = roles[su.role].tabs[0]; render(); }
+  else if(BRAND.set) showLogin();
+  else showNoAccess();
+}
+
+/* ----- OVOZLI YORDAMCHI ----- */
+const nrm = s => String(s).toLowerCase().replace(/[‘’ʻ`´ʼ']/g, '');
+function answerQuery(raw){
+  const r = R(), q = nrm(raw), has = re => re.test(q), deny = 'Bu ma’lumotni ko‘rishga sizda ruxsat yo‘q.';
+  const per = has(/hafta|недел/) ? 'week' : has(/oylik|\boy\b|месяц/) ? 'month' : 'today';
+  const pn = {today: 'Bugungi', week: 'Oxirgi 7 kunlik', month: 'Shu oylik'}[per], rng = rangeOf(per);
+  const sold = () => productSales(S.branch, rng).filter(x => x.qty > 0);
+  if(has(/xarajat|расход/)) return r.report ? `${pn} xarajatlar: ${money(periodStats(S.branch, rng).exp)}.` : deny;
+  if(has(/foyda|прибыл/)){ if(!(r.report && r.cost)) return deny; const x = periodStats(S.branch, rng); return `${pn} foyda: ${money(x.profit)}. Xarajatlardan keyingi sof foyda: ${money(x.net)}.`; }
+  if(has(/eng\s*kop|kop\s*sot|больше всего|самый/)){ if(!r.report) return deny; const t = sold()[0]; return t ? `Eng ko‘p sotilgani: ${t.p.name}, ${fmt(t.qty)} dona.` : 'Bu davrda hali sotuv bo‘lmagan.'; }
+  if(has(/eng\s*kam|kam\s*sot/)){ if(!r.report) return deny; const l = sold(); const t = l[l.length - 1]; return t ? `Eng kam sotilgani: ${t.p.name}, ${fmt(t.qty)} dona.` : 'Bu davrda hali sotuv bo‘lmagan.'; }
+  if(has(/kam\s*qol|tugay|tugab|заканчив|мало/)){
+    const low = products.filter(p => status(p) !== 'ok');
+    return low.length ? 'Kam qolganlar: ' + low.map(p => `${p.name} (${fmt(stockOf(p))} dona)`).join(', ') + '.' : 'Kam qoldiqli mahsulot yo‘q.';
+  }
+  if(has(/savdo|sotuv|продаж|выручк|tushum/)){ if(!r.report) return deny; const x = periodStats(S.branch, rng); return `${pn} savdo: ${money(x.revenue)}, ${fmt(x.n)} ta chek.`; }
+  const qt = q.split(/[^a-zа-я0-9]+/).filter(Boolean);
+  const hit = products.filter(p => nrm(p.name).split(/[^a-zа-я0-9]+/).filter(t => t.length >= 3).some(t => qt.some(w => w.startsWith(t)))).slice(0, 3);
+  if(hit.length) return hit.map(p => r.all ? `${p.name}: ` + branches.map(b => `${b.name} — ${fmt(p.stock[b.id] || 0)} dona`).join(', ') + '.' : `${p.name}: omborda ${fmt(stockOf(p))} dona bor.`).join(' ');
+  if(has(/qoldi|qancha|nechta|ostat|остат|сколько/)) return products.map(p => `${p.name} — ${fmt(stockOf(p))} dona`).join('; ') + '.';
+  return 'Savolni tushunmadim. Masalan: «Bugungi savdo qancha?», «Omborda nechta Snickers bor?», «Qaysi mahsulot eng ko‘p sotildi?»';
+}
+function speak(t){
+  if(!S.vs || !('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(t); u.lang = S.vlang; speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+function viewOvoz(){
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 4px">Ovozli yordamchi</h2>
+    <div class="muted">Mikrofon tugmasini bosib savol bering yoki pastga yozing.</div>
+    <div class="two"><div><label for="vlang">Til</label><select id="vlang"><option value="uz-UZ" ${S.vlang === 'uz-UZ' ? 'selected' : ''}>O‘zbekcha</option><option value="ru-RU" ${S.vlang === 'ru-RU' ? 'selected' : ''}>Ruscha</option></select></div>
+    <div><label class="chk" style="margin-top:30px"><input type="checkbox" id="vsp" ${S.vs ? 'checked' : ''}> Javobni ovoz bilan o‘qish</label></div></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="mic" ${Rec ? '' : 'disabled'}>Gapirish</button>
+      <input id="vq" placeholder="Yoki savolni yozing" aria-label="Savol" style="flex:1"><button class="btn ghost" id="vgo">Yuborish</button></div>
+    ${Rec ? '' : '<div class="muted" style="margin-top:8px">Bu brauzer ovozni tanimaydi (Chrome tavsiya etiladi). Savolni yozib bering.</div>'}
+    <div class="sub" style="margin-top:10px">Masalan: «Bugungi savdo qancha?», «Bugungi foyda qancha?», «Omborda nechta Snickers bor?», «Qaysi mahsulotdan qancha qoldi?», «Bugun qaysi mahsulot eng ko‘p sotildi?»</div></div>
+    <div id="vl"></div>`;
+  const ask1 = text => {
+    text = text.trim(); if(!text) return;
+    const a = answerQuery(text);
+    $('vl').insertAdjacentHTML('afterbegin', `<div class="card"><div class="muted">${esc(text)}</div><div style="margin-top:4px"><b>${esc(a)}</b></div></div>`);
+    speak(a);
+  };
+  $('vlang').onchange = e => { S.vlang = e.target.value; };
+  $('vsp').onchange = e => { S.vs = e.target.checked; };
+  $('vgo').onclick = () => { ask1($('vq').value); $('vq').value = ''; };
+  $('vq').onkeydown = e => { if(e.key === 'Enter'){ ask1($('vq').value); $('vq').value = ''; } };
+  if(Rec) $('mic').onclick = () => {
+    const rec = new Rec(); rec.lang = S.vlang; rec.interimResults = false; $('mic').textContent = 'Tinglayapman...'; $('mic').disabled = true;
+    rec.onresult = e => ask1(e.results[0][0].transcript);
+    rec.onerror = () => toast('Ovozni tanib bo‘lmadi. Qayta urinib ko‘ring yoki yozib so‘rang.');
+    rec.onend = () => { $('mic').textContent = 'Gapirish'; $('mic').disabled = false; };
+    try{ rec.start(); } catch(_){ rec.onend(); }
+  };
+}
+
+/* ----- OFLAYN REJIM (sinxronlash simulyatsiyasi) ----- */
+function updateNet(){
+  const el = $('net'); if(!el) return;
+  const n = unsynced.size;
+  el.textContent = S.online ? (n ? `Onlayn · ${n} ta sinxronlanmagan` : 'Onlayn') : `Oflayn${n ? ` · ${n} ta sotuv navbatda` : ''}`;
+  el.className = 'who net' + (S.online ? '' : ' offl');
+  if($('nt')) $('nt').textContent = S.online ? 'Oflaynni sinash' : 'Onlaynga qaytish';
+}
+function syncNow(){
+  const n = unsynced.size; if(!n) return;
+  unsynced.clear();
+  if(S.user) addLog('sync', null, S.branch, n, 0, `${n} ta oflayn savdo serverga yuborildi`);
+  toast(`${n} ta sotuv sinxronlandi`);
+}
+function setOnline(v){ S.online = v; if(v) syncNow(); updateNet(); }
+window.addEventListener('online', () => setOnline(true));
+window.addEventListener('offline', () => setOnline(false));
+
+/* ----- ZAXIRA NUSXA ----- */
+const dateKeys = new Set(['t', 'at', 'createdAt', 'openedAt', 'closedAt', 'startedAt', 'finishedAt', 'approvedAt', 'receivedAt']);
+const revive = (k, v) => dateKeys.has(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : v;
+function makeBackup(){
+  return JSON.stringify({v: 4, at: new Date(), counters: {nextId, logId, shiftNo, saleNo, refNo, invNo, trNo, exNo},
+    branches, users, products, log, sales, refunds, shifts, inventories, transfers, expenses, voided, unsynced: [...unsynced]});
+}
+function restoreBackup(text){
+  const d = JSON.parse(text, revive);
+  const need = ['products', 'log', 'sales', 'refunds', 'shifts', 'inventories', 'transfers', 'expenses'];
+  if(!d || !need.every(k => Array.isArray(d[k])) || !d.counters) throw new Error('Fayl formati noto‘g‘ri');
+  const put = (arr, src) => arr.splice(0, arr.length, ...src);
+  const fz = o => Object.freeze(o);
+  if(Array.isArray(d.branches) && d.branches.length) put(branches, d.branches);
+  if(Array.isArray(d.users) && d.users.some(u => u.role === 'super')) put(users, d.users);
+  put(products, d.products);
+  put(log, d.log.map(fz));
+  put(sales, d.sales.map(s => fz({...s, items: fz(s.items.map(fz))})));
+  put(refunds, d.refunds.map(x => fz({...x, items: fz(x.items.map(fz))})));
+  put(expenses, d.expenses.map(fz));
+  put(shifts, d.shifts.map(x => x.closedAt ? fz(x) : x));
+  put(inventories, d.inventories.map(x => (x.status === 'open' || x.status === 'pending') ? x : fz(x)));
+  put(transfers, d.transfers.map(x => x.status === 'yolda' ? x : fz(x)));
+  Object.keys(voided).forEach(k => delete voided[k]);
+  Object.entries(d.voided || {}).forEach(([k, v]) => { voided[k] = fz(v); });
+  ({nextId, logId, shiftNo, saleNo, refNo, invNo, trNo, exNo} = d.counters);
+  unsynced.clear(); (d.unsynced || []).forEach(x => unsynced.add(x));
+  S.cart = []; S.dval = 0; S.card = 0; S.given = 0; S.trd = [];
+}
+function startBk(){
+  if(bkTimer) clearInterval(bkTimer);
+  bkTimer = S.autoBk ? setInterval(() => {
+    if(!S.user) return;
+    snapshots.unshift({t: new Date(), json: makeBackup()}); snapshots.length = Math.min(snapshots.length, 5);
+    if(S.tab === 'zaxira') viewZaxira();
+  }, S.bkMin * 60000) : null;
+}
+function viewZaxira(){
+  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 4px">Zaxira nusxa</h2>
+    <div class="muted">Barcha mahsulotlar, savdolar, qaytarishlar, smenalar, inventarizatsiya, transfer, xarajatlar va tarix bitta faylga saqlanadi.</div>
+    <div class="bar" style="margin-top:10px"><button class="btn" id="bkd">Zaxira nusxani yuklab olish</button>
+      <button class="btn ghost" id="bkr">Fayldan tiklash</button><input type="file" id="bkf" accept=".json,application/json" hidden></div>
+    <label class="chk"><input type="checkbox" id="bka" ${S.autoBk ? 'checked' : ''}> Avtomatik zaxira nusxa</label>
+    <label for="bkm">Har necha daqiqada</label><select id="bkm">${[1, 5, 15, 30].map(m => `<option value="${m}" ${m === S.bkMin ? 'selected' : ''}>${m} daqiqa</option>`).join('')}</select></div>
+  <h3>Avtomatik nusxalar (oxirgi 5 ta)</h3><div id="bks"></div>`;
+  $('bks').innerHTML = snapshots.length ? snapshots.map((x, i) => `<div class="row"><div><div class="nm">${fdt(x.t)}</div><div class="sub">${Math.round(x.json.length / 1024)} KB</div></div><span></span>
+    <div class="act"><button class="btn sm ghost" data-sd="${i}">Yuklab olish</button><button class="btn sm ghost" data-sr="${i}">Tiklash</button></div></div>`).join('')
+    : '<div class="empty">Hali avtomatik nusxa yaratilmagan. Birinchisi belgilangan vaqtdan keyin paydo bo‘ladi.</div>';
+  const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  const doRestore = async (text, label) => {
+    if(!(await ask('Zaxiradan tiklaysizmi?', `${label} dagi ma’lumotlar hozirgi barcha ma’lumotlarning o‘rniga yoziladi. Hozirgi holatni saqlab qo‘yish uchun avval nusxa yuklab oling.`, 'Ha, tiklash', 'Orqaga'))) return;
+    try{ restoreBackup(text); toast('Ma’lumotlar tiklandi'); render(); } catch(err){ toast('Tiklab bo‘lmadi: ' + err.message); }
+  };
+  $('bkd').onclick = () => { download(`zaxira-${stamp()}.json`, new Blob([makeBackup()], {type: 'application/json'})); toast('Zaxira nusxa yuklab olindi'); };
+  $('bkr').onclick = () => $('bkf').click();
+  $('bkf').onchange = e => { const f = e.target.files[0]; if(!f) return; const rd = new FileReader(); rd.onload = () => doRestore(String(rd.result), `«${f.name}»`); rd.readAsText(f); };
+  $('bka').onchange = e => { S.autoBk = e.target.checked; startBk(); };
+  $('bkm').onchange = e => { S.bkMin = +e.target.value; startBk(); };
+  $('bks').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.sd) download(`zaxira-${stamp()}.json`, new Blob([snapshots[+b.dataset.sd].json], {type: 'application/json'}));
+    if(b.dataset.sr){ const x = snapshots[+b.dataset.sr]; doRestore(x.json, fdt(x.t) + ' dagi nusxa'); }
+  };
+}
+
+
+/* ---------- Dialog yordamchilari (brauzer confirm/prompt o‘rniga) ---------- */
+function ask(title, body, ok, cancel){
+  return new Promise(res => {
+    const d = $('dlg');
+    d.innerHTML = `<h2 style="margin:0 0 6px">${title}</h2><div>${body}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="ak-n">${cancel || 'Bekor qilish'}</button><button class="btn" id="ak-y">${ok || 'Ha'}</button></div>`;
+    let done = false; const fin = v => { if(done) return; done = true; d.close(); res(v); };
+    d.showModal(); $('ak-n').onclick = () => fin(false); $('ak-y').onclick = () => fin(true); d.onclose = () => fin(false);
+  });
+}
+function askText(title, label){
+  return new Promise(res => {
+    const d = $('dlg');
+    d.innerHTML = `<h2 style="margin:0 0 6px">${title}</h2><label for="at-i">${label}</label><input id="at-i"><div class="err" id="at-e" role="alert"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="at-n">Orqaga</button><button class="btn" id="at-y">Tasdiqlash</button></div>`;
+    let done = false; const fin = v => { if(done) return; done = true; d.close(); res(v); };
+    d.showModal(); $('at-i').focus();
+    $('at-n').onclick = () => fin(null);
+    $('at-y').onclick = () => { const v = $('at-i').value.trim(); if(!v) return $('at-e').textContent = 'Sababni yozing.'; fin(v); };
+    d.onclose = () => fin(null);
+  });
+}
+
+/* ---------- Inventarizatsiyani yopish: 2 bosqichli tekshiruv ---------- */
+function buildInvItems(inv){
+  const zero = inv.type === 'umumiy', items = [];
+  products.forEach(p => {
+    const has = inv.counts[p.id] !== undefined;
+    if(!has && !zero) return;
+    const counted = has ? inv.counts[p.id] : 0, system = p.stock[inv.branch] || 0;
+    items.push(Object.freeze({pid: p.id, name: p.name, cost: p.cost, system, counted, diff: counted - system, uncounted: !has}));
+  });
+  return items;
+}
+function invReview(inv){
+  const r = R(), d = $('dlg'), items = buildInvItems(inv);
+  if(!items.length) return toast('Kamida bitta mahsulotni sanang.');
+  const s = invSummary({items}), less = items.filter(i => i.diff < 0), more = items.filter(i => i.diff > 0), same = items.filter(i => i.diff === 0);
+  const unc = items.filter(i => i.uncounted && i.diff !== 0).length;
+  const line = i => `<div class="cl" style="grid-template-columns:1fr auto"><div><div class="nm">${esc(i.name)}${i.uncounted ? ' <span class="sub">(sanalmagan)</span>' : ''}</div>
+    <div class="sub">Tizim: ${fmt(i.system)} · Sanaldi: ${fmt(i.counted)}</div></div><span class="badge ${i.diff < 0 ? 'b-zero' : 'b-low'}">${i.diff > 0 ? '+' : ''}${fmt(i.diff)}</span></div>`;
+  d.innerHTML = `<h2 style="margin:0 0 4px">Natijani tekshiring</h2>
+    <div class="muted">Hozircha ombor qoldig‘i o‘zgargani yo‘q. Yopsangiz, ${r.admin ? 'ombor qoldig‘i shu zahoti sanalgan songa moslanadi' : 'natija administratorga tasdiqlash uchun yuboriladi'}.</div>
+    <div class="card" style="margin:10px 0">
+      <div class="sumrow"><span>Kam chiqdi</span><span>${fmt(less.length)} xil · ${fmt(s.short)} dona${r.cost ? ' · ' + money(s.shortSum) : ''}</span></div>
+      <div class="sumrow"><span>Ko‘p chiqdi</span><span>${fmt(more.length)} xil · ${fmt(s.over)} dona${r.cost ? ' · ' + money(s.overSum) : ''}</span></div>
+      <div class="sumrow"><span>Mos keldi</span><span>${fmt(same.length)} xil</span></div></div>
+    ${unc ? `<div class="alert warn">${unc} ta mahsulot sanalmadi, shuning uchun omborda yo‘q deb hisoblandi. Agar ular omborda bor bo‘lsa, orqaga qaytib sanang.</div>` : ''}
+    <div style="max-height:40vh;overflow:auto">
+      ${less.length ? '<h3 style="margin:8px 0 2px">Kam chiqqanlar</h3>' + less.map(line).join('') : ''}
+      ${more.length ? '<h3 style="margin:8px 0 2px">Ko‘p chiqqanlar</h3>' + more.map(line).join('') : ''}
+      ${!less.length && !more.length ? '<div class="empty">Farq yo‘q. Hamma narsa tizim bilan mos.</div>' : ''}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" id="rv-b">Sanashni davom ettirish</button><button class="btn" id="rv-y">Inventarizatsiyani yopish</button></div>`;
+  d.showModal();
+  $('rv-b').onclick = () => d.close();
+  $('rv-y').onclick = () => {
+    inv.items = Object.freeze(items); inv.finishedAt = new Date(); inv.status = 'pending';
+    d.close();
+    if(r.admin){ approveInv(inv); toast('Inventarizatsiya yopildi, ombor qoldig‘i yangilandi'); }
+    else { addLog('inventar', null, inv.branch, 0, 0, `Inventarizatsiya № ${inv.no} yakunlandi, tasdiq kutilmoqda (${items.length} ta mahsulot)`); toast('Natija administratorga yuborildi'); }
+    viewInventar();
+  };
+}
+function approveInv(inv){
+  inv.items.forEach(it => {
+    if(!it.diff) return;
+    const p = pById(it.pid), b = p.stock[inv.branch] || 0, nb = Math.max(0, b + it.diff);
+    p.stock[inv.branch] = nb;
+    addLog('inventar', p, inv.branch, Math.abs(it.diff), Math.abs(it.diff) * it.cost, `Inventarizatsiya № ${inv.no}: ${it.diff < 0 ? 'kamomad' : 'ortiqcha'} ${fmt(Math.abs(it.diff))}. Qoldiq: ${fmt(b)} → ${fmt(nb)}`);
+  });
+  inv.status = 'approved'; inv.approvedBy = S.user.name; inv.approvedAt = new Date(); Object.freeze(inv);
+}
+
+
+boot();
+</script>
+</body>
+</html>

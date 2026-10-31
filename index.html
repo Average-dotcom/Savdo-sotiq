@@ -181,6 +181,7 @@ body{background-image:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--t
 @media (prefers-reduced-motion:no-preference){.stat{animation:rise .5s ease both}.stat:nth-child(2){animation-delay:.08s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.24s}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.81.1/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -204,13 +205,7 @@ const roles = {
   viewer:   {label:'Hisobot ko‘ruvchi',       tabs:['sotuvlar','smena','ombor','xarajat','hisobot','ovoz','tarix'],                                                 edit:false, cost:true,  all:true,  report:true}
 };
 Object.values(roles).forEach(r => r.tabs.push('profil'));
-const users = [
-  {login:'admin',   pass:'admin123', name:'Boshlovchi',  role:'super',    branch:'b1'},
-  {login:'filial1', pass:'1234',     name:'Filial administratori', role:'filial',   branch:'b1'},
-  {login:'ombor1',  pass:'1234',     name:'Omborchi Aziz',       role:'omborchi', branch:'b1'},
-  {login:'kassir1', pass:'1234',     name:'Kassir Dilnoza',      role:'kassir',   branch:'b1'},
-  {login:'hisobot', pass:'1234',     name:'Hisobotchi',          role:'viewer',   branch:'b1'}
-];
+const users = [];   /* kirgandan keyin Supabase profillaridan to‘ladi */
 let nextId = 1;
 const mk = (name,codes,cat,cost,price,min,s1,s2) => ({id:nextId++,name,barcodes:codes,cat,cost,price,min,stock:{b1:s1,b2:s2}});
 const products = [
@@ -254,23 +249,26 @@ function showLogin(){
       <label for="ps">Parol</label><div class="pw"><input id="ps" type="password" autocapitalize="none" autocorrect="off" spellcheck="false" required><button type="button" id="pt" aria-label="Parolni ko‘rsatish">Ko‘rsat</button></div>
       <div class="err" id="le" role="alert"></div>
       <button class="btn" style="width:100%">Kirish</button>
-      ${BRAND.demo ? `<div class="hint"><b>Demo hisoblar:</b> filial1, ombor1, kassir1, hisobot / 1234</div>` : ''}
   </form></section></div>`;
   typeIn($('tg'));
   $('pt').onclick = () => { const i = $('ps'), sh = i.type === 'password'; i.type = sh ? 'text' : 'password'; $('pt').textContent = sh ? 'Yashir' : 'Ko‘rsat'; };
   let fails = 0, lockUntil = 0;
-  $('lf').onsubmit = e => {
+  $('lf').onsubmit = async e => {
     e.preventDefault();
     const wait = Math.ceil((lockUntil - Date.now()) / 1000);
     if(wait > 0){ $('le').textContent = `Juda ko‘p xato urinish. ${wait} soniyadan keyin qayta urinib ko‘ring.`; return; }
-    const u = users.find(x => x.login.toLowerCase() === $('lg').value.trim().toLowerCase() && x.pass === $('ps').value && !x.off);
-    if(!u){
+    const btn = $('lf').querySelector('button.btn'); btn.disabled = true; $('le').textContent = '';
+    const {error} = await sb.auth.signInWithPassword({email: toEmail($('lg').value), password: $('ps').value});
+    if(error){
+      btn.disabled = false;
+      if(!(error.status === 400 || error.code === 'invalid_credentials')){ $('le').textContent = 'Serverga ulanib bo‘lmadi. Internetni tekshiring.'; return; }
       fails++; if(fails >= 5){ lockUntil = Date.now() + Math.min(300, 15 * 2 ** (fails - 5)) * 1000; }
       $('le').textContent = fails >= 5 ? 'Juda ko‘p xato urinish. Birozdan keyin qayta urinib ko‘ring.' : 'Login yoki parol noto‘g‘ri. Qayta urinib ko‘ring.'; return;
     }
-    fails = 0;
-    lastLogin = new Date(); ping('kirish'); S.user = u; S.branch = u.branch; S.tab = roles[u.role].tabs[0]; S.grp = grpOf(S.tab); S.q=''; S.cat=''; S.low=false; S.cart=[]; S.dval=0; S.card=0; S.given=0;
-    ssSet(LS.session, u.login); render();
+    const r = await enterApp();
+    if(r === true){ fails = 0; return; }
+    btn.disabled = false;
+    $('le').textContent = r === 'noprofile' ? 'Akkaunt do‘konga biriktirilmagan yoki o‘chirilgan.' : 'Ma’lumotlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.';
   };
   $('lg').focus();
 }
@@ -294,7 +292,7 @@ function render(){
   ${gList.length > 1 ? `<div class="grps" role="tablist" aria-label="Bo‘limlar">${gList.map(g => `<button class="${g===S.grp?'on':''}" data-grp="${g}"><span class="ic" aria-hidden="true">${groupMeta[g].icon}</span>${groupMeta[g].label}</button>`).join('')}</div>` : ''}
   <div class="tabs" role="tablist">${curTabs.map(t=>`<button role="tab" class="${t===S.tab?'on':''}" data-tab="${t}"><span class="ic" aria-hidden="true">${tabIcons[t] || ''}</span>${tabNames[t]}${t==='ovoz' ? ' <span class="beta">BETA</span>' : ''}</button>`).join('')}</div>
   <main id="main"></main>`;
-  $('out').onclick = () => { S.user = null; ssSet(LS.session, null); showLogin(); };
+  $('out').onclick = async () => { try { await sb.auth.signOut(); } catch(e) {} S.user = null; showLogin(); };
   $('nt').onclick = () => setOnline(!S.online); updateNet(); if(!bkTimer) startBk();
   if($('bsel')) $('bsel').onchange = e => { S.branch = e.target.value; render(); };
   document.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { S.grp = b.dataset.grp; S.tab = r.tabs.find(t => grpOf(t) === S.grp); render(); });
@@ -769,13 +767,18 @@ function refundForm(s, mode){
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" id="rcn">Orqaga</button><button type="submit" class="btn">${cancel ? 'Savdoni bekor qilish' : 'Qaytarishni tasdiqlash'}</button></div></form>`;
   d.showModal();
   $('rcn').onclick = () => d.close();
-  $('rf').onsubmit = e => {
+  $('rf').onsubmit = async e => {
     e.preventDefault();
     const err = m => { $('re').textContent = m; };
     let appr = S.user;
     if(!r.refund){
-      appr = users.find(u => !u.off && u.login === $('al').value.trim() && u.pass === $('ap').value && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
-      if(!appr) return err('Administrator logini yoki paroli noto‘g‘ri.');
+      const cand = users.find(u => !u.off && u.login.toLowerCase() === $('al').value.trim().toLowerCase() && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
+      if(!cand) return err('Administrator logini yoki paroli noto‘g‘ri.');
+      /* parol alohida (vaqtinchalik) ulanish bilan tekshiriladi, joriy kassir seansi buzilmaydi */
+      const tmp = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: false, autoRefreshToken: false, detectSessionInUrl: false}});
+      const chk = await tmp.auth.signInWithPassword({email: toEmail(cand.login), password: $('ap').value});
+      if(chk.error) return err('Administrator logini yoki paroli noto‘g‘ri.');
+      appr = cand;
     }
     const reason = $('rr').value.trim(); if(!reason) return err('Sababni yozing.');
     let items = [];
@@ -1274,6 +1277,7 @@ function viewFilial(){
 }
 function viewXodim(){
   if(!R().owner) return;
+  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Xodimlar</h2><div class="sub">Xodim akkauntlarini ochish keyingi bosqichda serverga ulanadi. Hozircha faqat egasi kira oladi.</div></div>`; return;
   $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Yangi xodim akkaunti</h2>
     <label for="xn">Ism</label><input id="xn"><label for="xl">Login</label><input id="xl" autocapitalize="none"><label for="xp">Parol (kamida 4 belgi)</label><input id="xp" type="password">
     <label for="xr">Rol</label><select id="xr">${roleOpts('kassir')}</select><div class="sub" id="xd"></div>
@@ -1418,7 +1422,7 @@ function viewProfil(){
   const u = S.user, r = R();
   $('main').innerHTML = mediaCards(u, r) + soundCard() + `<div class="card"><h2 style="margin:0 0 4px">Mening profilim</h2><div class="sub">${esc(r.label)} · ${esc(bname(u.branch))}</div>
     <label for="pn">Ism</label><input id="pn" value="${esc(u.name)}">
-    <label for="pl">Login</label><input id="pl" value="${esc(u.login)}" autocapitalize="none">
+    <label for="pl">Login</label><input id="pl" value="${esc(u.login)}" autocapitalize="none" readonly>
     <label for="pw">Yangi parol (o‘zgartirmasangiz bo‘sh qoldiring)</label><input id="pw" type="password" autocomplete="new-password">
     <label for="pc">Joriy parol (tasdiqlash uchun)</label><input id="pc" type="password">
     <div class="err" id="pre" role="alert"></div><button class="btn" id="psave">Saqlash</button></div>
@@ -1437,16 +1441,20 @@ function viewProfil(){
     i.onchange = async () => { try { apply(await readImg(i.files[0], max, q)); toast(saveBrand() && saveData() ? 'Rasm saqlandi' : 'Rasm saqlanmadi: brauzer xotirasi to‘la'); applyBrand(); render(); } catch(e) { toast('Rasmni o‘qib bo‘lmadi'); } };
     const x = $(id + 'x'); if(x) x.onclick = () => { apply(null); saveBrand(); saveData(); applyBrand(); render(); };
   };
-  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; });
+  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; sb.rpc('update_my_profile', {p_name: u.name, p_avatar: u.avatar || null}); });
   if(r.owner){ bind('ulg', 256, 0, v => BRAND.logo = v || ''); bind('ubg', 1400, .72, v => BRAND.bg = v || ''); }
-  $('psave').onclick = () => {
-    const n = $('pn').value.trim(), l = $('pl').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
-    if(!n || !l) return er('Ism va login bo‘sh bo‘lmasin.');
-    if($('pc').value !== u.pass) return er('Joriy parol noto‘g‘ri.');
-    if(np && np.length < 4) return er('Yangi parol kamida 4 belgi bo‘lsin.');
-    if(users.some(x => x !== u && x.login.toLowerCase() === l.toLowerCase())) return er('Bu login band.');
-    shifts.forEach(x => { if(x.login === u.login && !Object.isFrozen(x)) x.login = l; });
-    u.name = n; u.login = l; if(np) u.pass = np; saveData(); toast('Profil saqlandi'); render();
+  $('psave').onclick = async () => {
+    const n = $('pn').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
+    if(!n) return er('Ismni yozing.');
+    if(np && np.length < 8) return er('Yangi parol kamida 8 belgi bo‘lsin.');
+    if(np){
+      const chk = await sb.auth.signInWithPassword({email: toEmail(u.login), password: $('pc').value});
+      if(chk.error) return er('Joriy parol noto‘g‘ri.');
+      const up = await sb.auth.updateUser({password: np}); if(up.error) return er('Parol o‘zgarmadi: ' + up.error.message);
+    }
+    const {error} = await sb.rpc('update_my_profile', {p_name: n, p_avatar: u.avatar || null});
+    if(error) return er('Saqlanmadi: ' + error.message);
+    u.name = n; saveData(); toast('Profil saqlandi'); render();
   };
   if(r.owner){
     $('bsave').onclick = () => {
@@ -1456,7 +1464,7 @@ function viewProfil(){
     };
     $('breset').onclick = async () => {
       if(await ask('Qayta sozlash', 'Hamma ma’lumot o‘chadi. Davom etasizmi?', 'Ha, o‘chirish')){
-        BRAND.set = false; try { localStorage.removeItem(LS.brand); localStorage.removeItem(LS.data); } catch(e) {} location.reload();
+        BRAND.set = false; try { await sb.auth.signOut(); } catch(e) {} try { localStorage.removeItem(LS.brand); localStorage.removeItem(LS.data); } catch(e) {} location.reload();
       }
     };
   }
@@ -1562,37 +1570,120 @@ const soundCard = () => `<div class="card"><h2 style="margin:0 0 4px">Ovozlar</h
   <label for="sdv">Balandligi</label><input id="sdv" type="range" min="0.1" max="1" step="0.05" value="${SND.vol}">
   <div class="bar" style="margin-top:10px"><button type="button" class="btn sm ghost" data-snd="ok">Normal tovar</button><button type="button" class="btn sm ghost" data-snd="error">Xato kod</button><button type="button" class="btn sm ghost" data-snd="extra">Ortiqcha / yetmaydi</button><button type="button" class="btn sm ghost" data-snd="sale">Savdo tugadi</button></div></div>`;
 
+/* ---------- Supabase: kirish va do‘kon yaratish ---------- */
+const SB_URL = 'https://hzicowfesgxgkhjwiubd.supabase.co';
+const SB_KEY = 'sb_publishable_CLDd0zH9sJHYvMAKk4j3Nw_9flEr6pt';   /* ochiq kalit; secret kalitni bu yerga YOZMANG */
+const LOGIN_DOMAIN = 'savdo-tizimi.app';   /* faqat ichki; “Email address is invalid” chiqsa, shuni o‘zgartiring (admin.html da emas, faqat bu yerda) */
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+const toEmail = l => String(l).trim().toLowerCase() + '@' + LOGIN_DOMAIN;
+const loginOk = l => /^[a-z0-9._-]{3,30}$/.test(l);
+const toLocalUser = p => ({id: p.user_id, login: p.login, name: p.name, role: p.role === 'owner' ? 'super' : p.role, branch: p.branch_id, off: p.active === false, ...(p.avatar ? {avatar: p.avatar} : {})});
+function resetLocalData(){
+  [products, log, sales, refunds, shifts, inventories, transfers, expenses].forEach(a => a.splice(0, a.length));
+  Object.keys(voided).forEach(k => delete voided[k]); unsynced.clear();
+}
+function startAs(u){
+  lastLogin = new Date(); ping('kirish'); S.user = u; S.branch = u.branch; S.tab = roles[u.role].tabs[0]; S.grp = grpOf(S.tab);
+  S.q = ''; S.cat = ''; S.low = false; S.cart = []; S.dval = 0; S.card = 0; S.given = 0; render();
+}
+/* true = kirdi; 'auth' | 'net' | 'noprofile' = kirmadi */
+async function enterApp(){
+  const {data: {user}, error: ue} = await sb.auth.getUser();
+  if(!user){ return ue && ue.status !== 401 && ue.status !== 403 ? 'net' : 'auth'; }
+  const {data: me, error: me_e} = await sb.from('profiles').select('user_id,shop_id,login,name,role,branch_id,active,avatar').eq('user_id', user.id).maybeSingle();
+  if(me_e) return 'net';
+  if(!me || me.active === false || !roles[me.role === 'owner' ? 'super' : me.role]){ await sb.auth.signOut(); return 'noprofile'; }
+  const [shopR, brR, prR] = await Promise.all([
+    sb.from('shops').select('id,name,brand').eq('id', me.shop_id).maybeSingle(),
+    sb.from('branches').select('id,name,created_at').eq('shop_id', me.shop_id).order('created_at'),
+    sb.from('profiles').select('user_id,login,name,role,branch_id,active,avatar').eq('shop_id', me.shop_id)]);
+  if(shopR.error || brR.error || prR.error || !shopR.data || !brR.data.length) return 'net';
+  const shop = shopR.data, br = shop.brand || {};
+  if(BRAND.shopId !== shop.id){ resetLocalData(); BRAND.logo = ''; BRAND.bg = ''; BRAND.tagline = ''; }
+  Object.assign(BRAND, {shop: shop.name, tagline: br.tagline || BRAND.tagline || '', color: br.color || BRAND.color, lcolor: br.lcolor || br.color || BRAND.lcolor, demo: false, set: true, shopId: shop.id});
+  branches.splice(0, branches.length, ...brR.data.map(b => ({id: b.id, name: b.name})));
+  users.splice(0, users.length, ...prR.data.filter(p => roles[p.role === 'owner' ? 'super' : p.role]).map(toLocalUser));
+  const u = users.find(x => x.id === me.user_id);
+  saveBrand(); applyBrand(); saveData(); startAs(u);
+  return true;
+}
+function stripKode(){ if(/#k=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); }
+async function claimCode(code){
+  const box = (logo, title, t, extra = '') => { $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(logo, title, t)}<section class="lf"><h2>${t}</h2>${extra}</section></div>`; typeIn($('tg')); };
+  box('⏳', 'Ulanmoqda', 'Havola tekshirilmoqda…');
+  try { await sb.auth.signOut(); } catch(e) {}
+  const {data, error} = await sb.rpc('invite_info', {p_code: code});
+  const inv = Array.isArray(data) ? data[0] : data;
+  if(error || !inv){
+    stripKode();
+    return box('🔒', 'Havola kerak', error ? 'Serverga ulanib bo‘lmadi.' : 'Havola topilmadi yoki allaqachon ishlatilgan.', '<div class="muted">Internetni tekshiring yoki administratordan yangi havola so‘rang.</div>');
+  }
+  const cfg = inv.cfg || {};
+  Object.assign(BRAND, {shop: inv.shop_name, color: cfg.color || BRAND.color, lcolor: cfg.lcolor || cfg.color || BRAND.lcolor}); applyBrand();
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(BRAND.shop.trim().charAt(0).toUpperCase() || 'S', BRAND.shop, 'Do‘konni faollashtirish')}
+  <section class="lf"><form id="af" autocomplete="off"><h2>${esc(inv.shop_name)}</h2><div class="muted">O‘zingiz uchun login va parol tanlang. Parolni hech kim bilmaydi.</div>
+    <label for="an">Ismingiz</label><input id="an" required>
+    <label for="al">Login (lotin harf, raqam, nuqta, tire)</label><input id="al" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <label for="ap">Parol (kamida 8 belgi)</label><input id="ap" type="password" autocomplete="new-password" required>
+    <label for="ap2">Parolni takrorlang</label><input id="ap2" type="password" autocomplete="new-password" required>
+    <div class="err" id="ae" role="alert"></div><button class="btn" style="width:100%">Faollashtirish</button></form></section></div>`;
+  typeIn($('tg'));
+  $('af').onsubmit = async e => {
+    e.preventDefault();
+    const er = m => { $('ae').textContent = m; }, btn = $('af').querySelector('button.btn');
+    const fail = m => { er(m); btn.disabled = false; btn.textContent = 'Faollashtirish'; };
+    er('');
+    const n = $('an').value.trim(), l = $('al').value.trim().toLowerCase(), p = $('ap').value;
+    if(!n) return er('Ismingizni yozing.');
+    if(!loginOk(l)) return er('Login 3–30 belgi bo‘lsin: lotin harf, raqam, nuqta, tire.');
+    if(p.length < 8) return er('Parol kamida 8 belgi bo‘lsin.');
+    if(p !== $('ap2').value) return er('Parollar bir xil emas.');
+    btn.disabled = true; btn.textContent = 'Yaratilmoqda…';
+    const su = await sb.auth.signUp({email: toEmail(l), password: p});
+    if(su.error){
+      if(/already|registered|exists/i.test((su.error.message || '') + (su.error.code || ''))){
+        const r = await sb.auth.signInWithPassword({email: toEmail(l), password: p});   /* oldingi urinish yarim qolgan bo‘lsa davom ettiramiz */
+        if(r.error) return fail('Bu login band. Boshqasini tanlang.');
+      } else return fail(/invalid/i.test(su.error.message || '') ? 'Login qabul qilinmadi. Boshqa login yozing yoki administratorga ayting.' : 'Akkaunt ochilmadi: ' + su.error.message);
+    } else if(!su.data.session) return fail('Akkaunt ochildi, lekin avtomatik kirmadi. Administrator Supabase’da “Confirm email”ni o‘chirishi kerak.');
+    const {error: ce} = await sb.rpc('create_shop', {p_code: code, p_name: n, p_login: l});
+    if(ce){ await sb.auth.signOut(); return fail('Do‘konni yaratib bo‘lmadi: ' + ce.message); }
+    stripKode();
+    const r = await enterApp();
+    if(r !== true){ fail('Do‘kon yaratildi. Endi shu login va parol bilan kiring.'); setTimeout(showLogin, 1800); }
+  };
+}
+let inited = false;
+function initApp(){
+  if(inited) return; inited = true;
+  if(!BRAND.sid){ BRAND.sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); if(BRAND.set) saveBrand(); }
+  try { Object.assign(SND, JSON.parse(lsGet('savdo:snd') || '{}')); } catch(e) {}
+  fixSku(); applyBrand(); ping('ochildi'); setInterval(() => ping('davriy'), VENDOR.every);
+  setInterval(() => { if(BRAND.set) saveData(); }, 3000);
+  addEventListener('pagehide', () => { if(BRAND.set) saveData(); });
+}
+async function startSession(){
+  let session = null;
+  try { session = (await sb.auth.getSession()).data.session; } catch(e) {}
+  if(session){
+    const r = await enterApp();
+    if(r === true) return;
+    if(r === 'net' && BRAND.set){   /* oflayn: oxirgi saqlangan ma’lumot bilan ochamiz */
+      const su = users.find(x => x.id === session.user.id && !x.off);
+      if(su && roles[su.role]){ startAs(su); return; }
+    }
+  }
+  showLogin();
+}
 function boot(){
   const b = lsGet(LS.brand);
   if(b){ try { Object.assign(BRAND, JSON.parse(b)); } catch(e) {} }
   const d = lsGet(LS.data); if(d && BRAND.set){ try { restoreBackup(d); } catch(e) {} }
+  initApp();
   const mk = location.hash.match(/#k=([A-Za-z0-9_-]{6,60})/);
-  if(!BRAND.set && mk && VENDOR.url) return claimCode(mk[1]);
-  let linked = false;
-  if(!BRAND.set) linked = applyShopLink(); else stripShopLink();
-  finishBoot(linked);
-}
-function claimCode(code){
-  const box = (logo, title, t, extra = '') => { $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(logo, title, t)}<section class="lf"><h2>${t}</h2>${extra}</section></div>`; typeIn($('tg')); };
-  box('⏳', 'Ulanmoqda', 'Do‘kon ma’lumotlari yuklanmoqda…');
-  fetch(VENDOR.url + '?act=claim&code=' + encodeURIComponent(code)).then(r => r.json()).then(j => {
-    if(j && j.ok && applyCfg(j.cfg)){ stripShopLink(); setTimeout(() => finishBoot(true), 0); return; }
-    stripShopLink();
-    const msg = {used: 'Bu havola allaqachon ishlatilgan.', expired: 'Havola muddati tugagan.', revoked: 'Bu havola bekor qilingan.', none: 'Havola topilmadi.'}[j && j.err] || 'Havolani ochib bo‘lmadi.';
-    box('🔒', 'Havola kerak', msg, '<div class="muted">Administratordan yangi havola so‘rang.</div>');
-  }).catch(() => box('📡', 'Aloqa yo‘q', 'Internetga ulanib bo‘lmadi.', '<div class="muted">Internetni tekshiring va qayta urinib ko‘ring.</div><button class="btn" style="margin-top:14px" onclick="location.reload()">Qayta urinish</button>'));
-}
-function finishBoot(linked){
-  if(!BRAND.sid){ BRAND.sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); if(BRAND.set) saveBrand(); }
-  try { Object.assign(SND, JSON.parse(lsGet('savdo:snd') || '{}')); } catch(e) {}
-  fixSku(); applyBrand(); ping(linked ? 'ulandi' : 'ochildi'); setInterval(() => ping('davriy'), VENDOR.every);
-  setInterval(() => { if(BRAND.set) saveData(); }, 3000);
-  addEventListener('pagehide', () => { if(BRAND.set) saveData(); });
-  const savedLogin = BRAND.set ? ssGet(LS.session) : null;
-  const su = savedLogin ? users.find(x => x.login === savedLogin && !x.off) : null;
-  if(su){ S.user = su; S.branch = su.branch; S.tab = roles[su.role].tabs[0]; render(); }
-  else if(BRAND.set) showLogin();
-  else showNoAccess();
+  if(mk) return claimCode(mk[1]);
+  stripShopLink();
+  startSession();
 }
 
 /* ----- OVOZLI YORDAMCHI ----- */

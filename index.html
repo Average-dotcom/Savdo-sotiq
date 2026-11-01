@@ -1430,8 +1430,8 @@ function viewProfil(){
     i.onchange = async () => { try { apply(await readImg(i.files[0], max, q)); toast(saveBrand() && saveData() ? 'Rasm saqlandi' : 'Rasm saqlanmadi: brauzer xotirasi to‘la'); applyBrand(); render(); } catch(e) { toast('Rasmni o‘qib bo‘lmadi'); } };
     const x = $(id + 'x'); if(x) x.onclick = () => { apply(null); saveBrand(); saveData(); applyBrand(); render(); };
   };
-  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; });
-  if(r.owner){ bind('ulg', 256, 0, v => BRAND.logo = v || ''); bind('ubg', 1400, .72, v => BRAND.bg = v || ''); }
+  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; saveMedia('av', v); });
+  if(r.owner){ bind('ulg', 256, 0, v => { BRAND.logo = v || ''; saveMedia('logo', v); }); bind('ubg', 1400, .72, v => { BRAND.bg = v || ''; saveMedia('bg', v); }); }
   $('psave').onclick = async () => {
     const n = $('pn').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
     if(!n) return er('Ismni yozing.');
@@ -1562,13 +1562,15 @@ const SCRIPT_RE = /^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w
 const LOGIN_RE = /^[a-z0-9._-]{3,30}$/, loginOk = l => LOGIN_RE.test(l);
 const DEV = (() => { let d = lsGet('savdo:dev'); if(!d){ d = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); lsSet('savdo:dev', d); } return d; })();
 const API = {url: lsGet(SHEETS_KEY) || '', tok: lsGet(TOK_KEY) || ''};
-const SY = {rev: +lsGet(REV_KEY) || 0, hash: lsGet(HASH_KEY) || '', busy: false, err: '', ro: false, timer: 0, hb: 0, ask: false};
+const SY = {rev: +lsGet(REV_KEY) || 0, hash: lsGet(HASH_KEY) || '', busy: false, err: '', ro: false, timer: 0, hb: 0, ask: false, mrev: +lsGet('savdo:mrev') || 0};
 const PENDING = {branch: ''};
+const AVA = (() => { try { return JSON.parse(lsGet('savdo:ava') || '{}'); } catch(e){ return {}; } })();
 const CLEAN = JSON.stringify({v: 4, counters: {nextId: 1, logId: 1, shiftNo: 1, saleNo: 1001, refNo: 1, invNo: 1, trNo: 1, exNo: 1},
   branches: [{id: 'b1', name: 'Asosiy filial'}], products: [], log: [], sales: [], refunds: [], shifts: [], inventories: [], transfers: [], expenses: [], voided: {}});
 
 async function api(a, d = {}, authed = true){
   if(!API.url) throw Object.assign(new Error('Sheets ulanmagan'), {code: 'nourl'});
+  if(a === 'pull') d = {mrev: SY.mrev, ...d};
   let j;
   try {
     const r = await fetch(API.url, {method: 'POST', body: JSON.stringify({a, t: authed ? API.tok : undefined, ...d})});
@@ -1586,14 +1588,26 @@ function h53(str){
 }
 function stateJson(){ const o = JSON.parse(makeBackup()); delete o.users; delete o.unsynced; delete o.at; return JSON.stringify(o); }
 function markSynced(hh, rev){ SY.hash = hh; SY.rev = rev; lsSet(REV_KEY, String(rev)); lsSet(HASH_KEY, hh); }
-const toLocalUser = p => ({login: p.login, name: p.name, role: p.role, branch: p.branch, off: p.active === false});
+const toLocalUser = p => ({login: p.login, name: p.name, role: p.role, branch: p.branch, off: p.active === false, ...(AVA[p.login] ? {avatar: AVA[p.login]} : {})});
 function setUsers(list){ users.splice(0, users.length, ...list.filter(p => roles[p.role]).map(toLocalUser)); }
 function applyBrandRemote(b){
   Object.assign(BRAND, {shop: b.shop || BRAND.shop, tagline: b.tagline || '', color: b.color || BRAND.color, lcolor: b.lcolor || b.color || BRAND.lcolor, demo: false, set: true});
   saveBrand(); applyBrand();
 }
+function applyMedia(p){
+  if(!p.media) return false;
+  BRAND.logo = p.media.logo || ''; BRAND.bg = p.media.bg || '';
+  Object.keys(AVA).forEach(k => delete AVA[k]); Object.assign(AVA, p.media.av || {});
+  lsSet('savdo:ava', JSON.stringify(AVA)); SY.mrev = p.mrev; lsSet('savdo:mrev', String(p.mrev));
+  saveBrand(); applyBrand(); return true;
+}
+function saveMedia(kind, v){
+  if(kind === 'av' && S.user){ if(v) AVA[S.user.login] = v; else delete AVA[S.user.login]; lsSet('savdo:ava', JSON.stringify(AVA)); }
+  api('media_set', {kind, data: v || ''}).then(r => { SY.mrev = r.mrev; lsSet('savdo:mrev', String(r.mrev)); }).catch(x => toast('Rasm Sheets’ga saqlanmadi: ' + x.message));
+}
 function applyRemote(p){
   if(p.brand) applyBrandRemote(p.brand);
+  applyMedia(p);
   if(Array.isArray(p.users)) setUsers(p.users);
   if(p.state){ restoreBackup(p.state); markSynced(h53(stateJson()), p.rev); }
   else if(!p.same && p.rev > 0) throw new Error('Ma’lumotni yuklab bo‘lmadi. Birozdan keyin qayta urinib ko‘ring.');
@@ -1655,7 +1669,7 @@ function startHb(){
       const p = await api('pull', {device: DEV, since: SY.rev});
       const canWrite = WRITERS.includes(S.user.role), mine = canWrite && p.lease.mine;
       if(!p.same && (SY.ro || !mine)){ SY.ro = !mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
-      else { SY.ro = !mine; if(Array.isArray(p.users)){ setUsers(p.users); S.user = users.find(x => x.login === S.user.login) || S.user; } }
+      else { SY.ro = !mine; const m = applyMedia(p); if(Array.isArray(p.users)){ setUsers(p.users); S.user = users.find(x => x.login === S.user.login) || S.user; } if(m) render(); }
       updateNet();
     } catch(x){ if(x.code === 'auth') sessionLost(); }
   }, 45000);

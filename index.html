@@ -198,6 +198,7 @@ const parseCodes = s => [...new Set(String(s).split(/[\s,;]+/).filter(Boolean))]
 const branches = [{id:'b1',name:'Chilonzor filiali'},{id:'b2',name:'Yunusobod filiali'}];
 const roles = {
   super:    {label:'Boshlovchi (bosh administrator)', owner:true, tabs:['kassa','sotuvlar','smena','ombor','kirim','inventar','transfer','xarajat','hisobot','ovoz','tarix','zaxira','filiallar','xodimlar'], edit:true,  cost:true,  all:true,  sell:true,  refund:true,  admin:true, stockops:true, expense:true, report:true, backup:true},
+  admin:    {label:'Administrator (barcha filial)', tabs:['kassa','sotuvlar','smena','ombor','kirim','inventar','transfer','xarajat','hisobot','ovoz','tarix','zaxira','xodimlar'], edit:true, cost:true, all:true, sell:true, refund:true, admin:true, stockops:true, expense:true, report:true, staff:true},
   filial:   {label:'Filial administratori',   tabs:['kassa','sotuvlar','smena','ombor','kirim','inventar','transfer','xarajat','hisobot','ovoz','tarix'],           edit:true,  cost:true,  all:false, sell:true,  refund:true,  admin:true, stockops:true, expense:true, report:true},
   omborchi: {label:'Omborchi',                tabs:['ombor','kirim','inventar','transfer','ovoz','tarix'],                                                          edit:true,  cost:true,  all:false, stockops:true},
   kassir:   {label:'Kassir',                  tabs:['kassa','sotuvlar','smena','ombor','ovoz'],                                                                     edit:false, cost:false, all:false, sell:true,  own:true},
@@ -331,7 +332,7 @@ function renderList(){
     const badge = st==='zero' ? '<span class="badge b-zero">Tugagan</span>' : st==='low' ? '<span class="badge b-low">Kam qoldi</span>' : '<span class="badge b-ok">Yetarli</span>';
     return `<div class="row">
       <div><div class="nm">${esc(p.name)}</div>
-        <div class="sub">${esc(p.cat)} · artikul: ${esc(p.sku)} · barcode: ${p.barcodes.map(esc).join(', ')}</div></div>
+        <div class="sub">${esc(p.cat)}${p.variant ? ' · ' + Object.entries(p.variant).map(([k, v]) => esc(k) + ': ' + esc(v)).join(', ') : ''} · artikul: ${esc(p.sku)} · barcode: ${p.barcodes.map(esc).join(', ')}</div></div>
       <div class="num"><b>${fmt(s)} dona</b><br>${badge}</div>
       <div class="sub">Sotuv: <b>${money(p.price)}</b>${r.cost ? ` · Kirim: ${money(p.cost)} · Qiymati: ${money(p.cost*s)}` : ''} · Minimal: ${fmt(p.min)}</div>
       ${r.edit ? `<div class="act"><button class="btn sm ghost" data-lbl="${p.id}">Stiker</button><button class="btn sm ghost" data-edit="${p.id}">Tahrirlash</button></div>` : '<span></span>'}
@@ -762,7 +763,7 @@ function refundForm(s, mode){
     const err = m => { $('re').textContent = m; };
     let appr = S.user;
     if(!r.refund){
-      const cand = users.find(u => !u.off && u.login === $('al').value.trim().toLowerCase() && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
+      const cand = users.find(u => !u.off && u.login === $('al').value.trim().toLowerCase() && roles[u.role].refund && (roles[u.role].all || u.branch === S.branch));
       if(!cand) return err('Administrator logini yoki paroli noto‘g‘ri.');
       try { await api('verify', {login: cand.login, pass: $('ap').value}, false); }
       catch(x){ return err(x.net ? 'Serverga ulanib bo‘lmadi.' : 'Administrator logini yoki paroli noto‘g‘ri.'); }
@@ -1235,9 +1236,8 @@ function printReport(kind){
 
 
 /* ----- BOSHLOVCHI PANELI: filiallar va xodimlar (faqat boshlovchi) ----- */
-const staffRoles = ['filial', 'omborchi', 'kassir', 'viewer'];
-const roleDesc = {filial: 'Filialni boshqaradi: kassa, ombor, xarajat, hisobot', omborchi: 'Faqat ombor, kirim, inventarizatsiya, transfer', kassir: 'Faqat kassa va o‘z smenasi', viewer: 'Faqat hisobotlarni ko‘radi, o‘zgartira olmaydi'};
-const roleOpts = sel => staffRoles.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(roles[k].label)}</option>`).join('');
+const roleDesc = {admin: 'Hamma filiallarda to‘liq ishlaydi: kassa, ombor, xarajat, hisobot, zaxira. Xodim va filial qo‘sha olmaydi', filial: 'Filialni boshqaradi: kassa, ombor, xarajat, hisobot', omborchi: 'Faqat ombor, kirim, inventarizatsiya, transfer', kassir: 'Faqat kassa va o‘z smenasi', viewer: 'Faqat hisobotlarni ko‘radi, o‘zgartira olmaydi'};
+const roleOpts = sel => assignable().map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(roleLabel(k))}</option>`).join('');
 const branchOpts = sel => branches.map(b => `<option value="${b.id}" ${b.id === sel ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
 function viewFilial(){
   if(!R().owner) return;
@@ -1264,37 +1264,87 @@ function viewFilial(){
   };
 }
 async function reloadUsers(){ const r = await api('users'); setUsers(r.users); }
+const canStaff = r => !!(r.owner || r.staff);
+const roleLabel = k => roles[k] ? roles[k].label : k;
+const tabsText = k => (roles[k]?.tabs || []).filter(t => t !== 'profil').map(t => tabNames[t]).join(', ') || '—';
+const roleDescOf = k => roles[k]?.custom ? (roles[k].desc ? roles[k].desc + '. ' : '') + 'Bo‘limlar: ' + tabsText(k) : (roleDesc[k] || '');
 function viewXodim(){
-  if(!R().owner) return;
+  const r = R(); if(!canStaff(r)) return;
+  const manage = u => u.role !== 'super' && u.login !== S.user.login && (r.owner || u.role !== 'admin');
   $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Yangi xodim akkaunti</h2>
     <label for="xn">Ism</label><input id="xn"><label for="xl">Login (lotin harf, raqam, nuqta, tire)</label><input id="xl" autocapitalize="none"><label for="xp">Parol (kamida 8 belgi)</label><input id="xp" type="password">
     <label for="xr">Rol</label><select id="xr">${roleOpts('kassir')}</select><div class="sub" id="xd"></div>
     <label for="xb">Filial</label><select id="xb">${branchOpts(S.branch)}</select>
     <div class="err" id="xe" role="alert"></div><button class="btn" id="xadd">Akkaunt ochish</button></div>
+    <h3>Rollar (${customRoles.length})</h3>
+    <div class="muted" style="margin-bottom:8px">Tayyor rollar (Administrator, Filial administratori, Omborchi, Kassir, Hisobot ko‘ruvchi) o‘zgarmaydi. O‘zingizga kerakli ruxsatlar bilan yangi rol yarating, masalan «Katta kassir» yoki «Sotuv menejeri». Rol ruxsatini o‘zgartirsangiz, shu roldagi hamma xodimga darrov ta’sir qiladi.</div>
+    <div class="bar"><button class="btn" id="rnew">+ Yangi rol yaratish</button></div>
+    ${customRoles.map(c => { const k = 'c_' + c.id, n = users.filter(u => u.role === k).length;
+      return `<div class="row"><div><div class="nm">${esc(c.name)}</div><div class="sub">${esc(c.desc ? c.desc + ' · ' : '')}Xodimlar: ${n} · Bo‘limlar: ${esc(tabsText(k))}</div></div>
+        <div><button class="btn sm ghost" data-re="${c.id}">Tahrirlash</button> <button class="btn sm ghost" data-rd="${c.id}">O‘chirish</button></div></div>`; }).join('')}
     <h3>Xodimlar (${users.length})</h3>` + users.map(u => `<div class="row"><div><div class="nm">${esc(u.name)}${u.off ? ' · o‘chirilgan' : ''}</div>
-    <div class="sub">${esc(u.login)} · ${esc(roles[u.role].label)} · ${esc(bname(u.branch))}</div></div>
-    ${u.role === 'super' ? '' : `<div><button class="btn sm ghost" data-eu="${esc(u.login)}">Tahrirlash</button> <button class="btn sm ghost" data-ou="${esc(u.login)}">${u.off ? 'Yoqish' : 'O‘chirish'}</button></div>`}</div>`).join('');
-  const dd = () => $('xd').textContent = roleDesc[$('xr').value]; dd(); $('xr').onchange = dd;
-  const run = async (fn, okMsg) => { try { await fn(); await reloadUsers(); toast(okMsg); viewXodim(); } catch(x){ toast(x.net ? 'Serverga ulanib bo‘lmadi' : x.message); } };
+    <div class="sub">${esc(u.login)} · ${esc(roleLabel(u.role))} · ${esc(bname(u.branch))}</div></div>
+    ${manage(u) ? `<div><button class="btn sm ghost" data-eu="${esc(u.login)}">Tahrirlash</button> <button class="btn sm ghost" data-ou="${esc(u.login)}">${u.off ? 'Yoqish' : 'O‘chirish'}</button></div>` : ''}</div>`).join('');
+  const dd = () => $('xd').textContent = roleDescOf($('xr').value); dd(); $('xr').onchange = dd;
+  const run = async (fn, okMsg) => { try { await fn(); await reloadUsers(); saveData(); toast(okMsg); viewXodim(); } catch(x){ toast(x.net ? 'Serverga ulanib bo‘lmadi' : x.message); } };
+  $('rnew').onclick = () => roleForm();
   $('xadd').onclick = () => {
-    const n = $('xn').value.trim(), l = $('xl').value.trim().toLowerCase(), p = $('xp').value, er = m => $('xe').textContent = m;
+    const n = $('xn').value.trim(), l = $('xl').value.trim().toLowerCase(), p = $('xp').value, er = m => $('xe').textContent = m, rk = $('xr').value;
     if(!n || !l) return er('Ism va loginni yozing.');
     if(!loginOk(l)) return er('Login 3–30 belgi: lotin harf, raqam, nuqta, tire.');
     if(p.length < 8) return er('Parol kamida 8 belgi bo‘lsin.');
     if(users.some(u => u.login === l)) return er('Bu login band.');
-    run(() => api('user_save', {isNew: true, login: l, name: n, pass: p, role: $('xr').value, branch: $('xb').value, active: true}), 'Akkaunt ochildi: ' + l);
+    if(!assignable().includes(rk)) return er('Bu rolni berishga ruxsat yo‘q.');
+    run(async () => { await api('user_save', {isNew: true, login: l, name: n, pass: p, role: srvRole(rk), branch: $('xb').value, active: true}); setMap(l, rk); }, 'Akkaunt ochildi: ' + l);
   };
   $('main').onclick = async e => {
     const b = e.target.closest('button'); if(!b) return;
-    if(b.dataset.ou){ const u = users.find(x => x.login === b.dataset.ou); return run(() => api('user_save', {login: u.login, name: u.name, role: u.role, branch: u.branch, active: !!u.off}), u.off ? 'Akkaunt yoqildi' : 'Akkaunt o‘chirildi'); }
+    if(b.dataset.re) return roleForm(customRoles.find(c => c.id === b.dataset.re));
+    if(b.dataset.rd){
+      const c = customRoles.find(x => x.id === b.dataset.rd), n = users.filter(u => u.role === 'c_' + c.id).length;
+      if(n) return toast(`«${c.name}» rolida ${n} ta xodim bor. Avval ularga boshqa rol bering.`);
+      if(!(await ask(`«${c.name}» roli o‘chirilsinmi?`, 'Bu amalni qaytarib bo‘lmaydi.', 'Ha, o‘chirish', 'Orqaga'))) return;
+      customRoles.splice(customRoles.indexOf(c), 1); regRoles(); saveData(); toast('Rol o‘chirildi'); return viewXodim();
+    }
+    if(b.dataset.ou){
+      const u = users.find(x => x.login === b.dataset.ou); if(!manage(u)) return;
+      if(!u.off && !(await ask(u.name + ' akkaunti o‘chirilsinmi?', 'U tizimga kira olmaydi. Keyin istalgan vaqt «Yoqish» orqali qaytarish mumkin.', 'Ha, o‘chirish', 'Orqaga'))) return;
+      return run(() => api('user_save', {login: u.login, name: u.name, role: srvRole(u.role), branch: u.branch, active: !!u.off}), u.off ? 'Akkaunt yoqildi' : 'Akkaunt o‘chirildi');
+    }
     if(!b.dataset.eu) return;
-    const u = users.find(x => x.login === b.dataset.eu);
+    const u = users.find(x => x.login === b.dataset.eu); if(!manage(u)) return;
     if(await ask('Xodimni tahrirlash', `<label for="eu-n">Ism</label><input id="eu-n" value="${esc(u.name)}"><label for="eu-r">Rol</label><select id="eu-r">${roleOpts(u.role)}</select>
       <label for="eu-b">Filial</label><select id="eu-b">${branchOpts(u.branch)}</select><label for="eu-p">Yangi parol (o‘zgartirmasangiz bo‘sh qoldiring)</label><input id="eu-p" type="password">`, 'Saqlash')){
-      const n = $('eu-n').value.trim(), p = $('eu-p').value;
+      const n = $('eu-n').value.trim(), p = $('eu-p').value, rk = $('eu-r').value;
       if(!n) return toast('Ism bo‘sh bo‘lmasin'); if(p && p.length < 8) return toast('Parol kamida 8 belgi bo‘lsin');
-      run(() => api('user_save', {login: u.login, name: n, role: $('eu-r').value, branch: $('eu-b').value, active: !u.off, pass: p}), 'Saqlandi');
+      if(!assignable().includes(rk)) return toast('Bu rolni berishga ruxsat yo‘q');
+      run(async () => { await api('user_save', {login: u.login, name: n, role: srvRole(rk), branch: $('eu-b').value, active: !u.off, pass: p}); setMap(u.login, rk); }, 'Saqlandi');
     }
+  };
+}
+function roleForm(cr){
+  const d = $('dlg'), own = !!R().owner, cur = new Set(cr ? cr.perms : []);
+  d.innerHTML = `<form id="rof" method="dialog"><h2 style="margin:0 0 4px">${cr ? 'Rolni tahrirlash' : 'Yangi rol'}</h2>
+    <label for="ron">Rol nomi</label><input id="ron" value="${esc(cr?.name)}" placeholder="Masalan: Katta kassir">
+    <label for="rod">Qisqa izoh (ixtiyoriy)</label><input id="rod" value="${esc(cr?.desc)}">
+    ${cr ? '' : `<label for="rop">Tayyor shablondan boshlash</label><select id="rop"><option value="">— Bo‘sh —</option>${Object.keys(PRESETS).map(k => `<option>${esc(k)}</option>`).join('')}</select>`}
+    <div class="sub" style="margin-top:10px">Bu rol nimalarga ruxsat oladi? Belgilanmagan narsani xodim ko‘rmaydi va qila olmaydi.</div>
+    <div id="ropl" style="max-height:44vh;overflow:auto;margin-top:4px">${PERMS.filter(p => p[0] !== 'staff' || own).map(p => `<label class="chk" style="align-items:flex-start"><input type="checkbox" data-pk="${p[0]}" ${cur.has(p[0]) ? 'checked' : ''}><span><b>${p[1]}</b>${p[2] ? `<br><span class="sub">${p[2]}</span>` : ''}</span></label>`).join('')}</div>
+    <div class="err" id="roe" role="alert"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost" id="roc">Bekor qilish</button><button type="submit" class="btn">Saqlash</button></div></form>`;
+  d.showModal(); $('roc').onclick = () => d.close();
+  if($('rop')) $('rop').onchange = e => { const set = new Set(PRESETS[e.target.value] || []); document.querySelectorAll('[data-pk]').forEach(c => { c.checked = set.has(c.dataset.pk); }); if(e.target.value && !$('ron').value) $('ron').value = e.target.value; };
+  $('rof').onsubmit = e => {
+    e.preventDefault(); const er = m => { $('roe').textContent = m; };
+    const name = $('ron').value.trim(), desc = $('rod').value.trim(), perms = [...document.querySelectorAll('[data-pk]:checked')].map(c => c.dataset.pk);
+    if(!own && cr && cr.perms.includes('staff')) perms.push('staff');
+    if(!name) return er('Rol nomini yozing.');
+    const taken = Object.entries(roles).some(([k, v]) => v.label.toLowerCase() === name.toLowerCase() && k !== (cr ? 'c_' + cr.id : ''));
+    if(taken) return er('Bunday nomli rol allaqachon bor.');
+    if(!perms.length) return er('Kamida bitta ruxsatni belgilang.');
+    if(cr) Object.assign(cr, {name, desc, perms});
+    else customRoles.push({id: 'r' + (Math.max(0, ...customRoles.map(c => +c.id.slice(1))) + 1), name, desc, perms});
+    regRoles(); saveData(); d.close(); toast('Rol saqlandi'); render();
   };
 }
 
@@ -1430,8 +1480,8 @@ function viewProfil(){
     i.onchange = async () => { try { apply(await readImg(i.files[0], max, q)); toast(saveBrand() && saveData() ? 'Rasm saqlandi' : 'Rasm saqlanmadi: brauzer xotirasi to‘la'); applyBrand(); render(); } catch(e) { toast('Rasmni o‘qib bo‘lmadi'); } };
     const x = $(id + 'x'); if(x) x.onclick = () => { apply(null); saveBrand(); saveData(); applyBrand(); render(); };
   };
-  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; saveMedia('av', v); });
-  if(r.owner){ bind('ulg', 256, 0, v => { BRAND.logo = v || ''; saveMedia('logo', v); }); bind('ubg', 1400, .72, v => { BRAND.bg = v || ''; saveMedia('bg', v); }); }
+  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; });
+  if(r.owner){ bind('ulg', 256, 0, v => BRAND.logo = v || ''); bind('ubg', 1400, .72, v => BRAND.bg = v || ''); }
   $('psave').onclick = async () => {
     const n = $('pn').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
     if(!n) return er('Ismni yozing.');
@@ -1469,7 +1519,7 @@ function ping(event){
 
 /* ----- Tovarlarni Excel/CSV dan yuklash ----- */
 function parseCsv(t){
-  t = t.replace(/^\ufeff/, ''); const l1 = t.split('\n')[0], dl = (l1.match(/;/g) || []).length > (l1.match(/,/g) || []).length ? ';' : ',';
+  t = t.replace(/^\ufeff/, ''); let sp = /^sep=(.)\r?\n/i.exec(t); if(sp) t = t.slice(sp[0].length); const l1 = t.split('\n')[0], dl = sp ? sp[1] : (l1.match(/;/g) || []).length > (l1.match(/,/g) || []).length ? ';' : ',';
   const out = []; let row = [], c = '', q = false;
   for(let i = 0; i < t.length; i++){ const ch = t[i];
     if(q){ if(ch === '"'){ if(t[i + 1] === '"'){ c += '"'; i++; } else q = false; } else c += ch; }
@@ -1484,32 +1534,161 @@ async function readTable(f){
   if(!window.XLSX) throw new Error('Excel kutubxonasi yuklanmadi (internet kerak). Faylni CSV qilib saqlab, qayta tanlang.');
   const wb = XLSX.read(await f.arrayBuffer()); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
 }
-function importRows(rows){
-  const al = {name: ['nomi', 'nom', 'mahsulot', 'tovar', 'name'], sku: ['artikul', 'sku'], code: ['barcode', 'shtrix', 'shtrixkod'], cat: ['kategoriya', 'guruh', 'category'], cost: ['kirim narxi', 'kirim', 'tannarx', 'cost'], price: ['sotuv narxi', 'sotuv', 'narx', 'price'], min: ['minimal qoldiq', 'minimal', 'min'], qty: ['qoldiq', 'miqdor', 'soni', 'qty']};
-  const head = (rows.shift() || []).map(h => String(h).trim().toLowerCase()), ix = {};
-  for(const k in al) ix[k] = head.findIndex(h => al[k].includes(h));
-  if(ix.name < 0) throw new Error('«Nomi» ustuni topilmadi. Namuna faylga qarang.');
-  const g = (r, k) => ix[k] < 0 ? '' : String(r[ix[k]] ?? '').trim(), n = (r, k) => Math.max(0, Math.floor(+g(r, k).replace(/\s/g, '').replace(',', '.') || 0));
-  let neu = 0, merged = 0, bad = 0;
-  rows.forEach(r => {
-    const name = g(r, 'name'); if(!name){ if(r.some(x => String(x).trim())) bad++; return; }
-    const codes = parseCodes(g(r, 'code')), qty = n(r, 'qty');
-    const ex = products.find(x => x.name.trim().toLowerCase() === name.toLowerCase() || x.barcodes.some(c => codes.includes(c)));
-    if(ex){ ex.barcodes.push(...codes.filter(c => !ex.barcodes.includes(c))); if(qty){ ex.stock[S.branch] = (ex.stock[S.branch] || 0) + qty; addLog('kirim', ex, S.branch, qty, qty * ex.cost, 'Importdan qoldiqqa qo‘shildi'); } merged++; return; }
-    const np = {id: nextId++, name, sku: g(r, 'sku') || genSku(), barcodes: codes.length ? codes : [genBarcode()], cat: g(r, 'cat') || 'Boshqa', cost: n(r, 'cost'), price: n(r, 'price'), min: ix.min < 0 ? 5 : n(r, 'min'), stock: {b1: 0, b2: 0}};
-    np.stock[S.branch] = qty; products.push(np); addLog('yangi', np, S.branch, qty, qty * np.cost, 'Importdan qo‘shildi');
-    if(qty) addLog('kirim', np, S.branch, qty, qty * np.cost, 'Boshlang‘ich qoldiq (import)'); neu++;
+/* ----- Tovarlarni Excel/CSV dan yuklash: ustunlarni moslash, to‘liq tekshiruv, hammasi yoki hech nima ----- */
+const IMP_F = [['name', 'Nomi'], ['sku', 'Artikul'], ['code', 'Barcode'], ['cat', 'Kategoriya (katalog)'], ['cost', 'Kirim narxi'], ['price', 'Sotuv narxi'], ['min', 'Minimal qoldiq'], ['qty', 'Qoldiq']];
+const IMP_REQ = ['name', 'cat', 'cost', 'price'];
+const IMP_AL = {name: ['nomi', 'nom', 'mahsulot', 'mahsulot nomi', 'tovar', 'tovar nomi', 'name', 'product', 'наименование', 'название', 'товар'], sku: ['artikul', 'sku', 'article', 'артикул'],
+  code: ['barcode', 'bar code', 'shtrix', 'shtrixkod', 'shtrix kod', 'штрихкод', 'ean'], cat: ['kategoriya', 'guruh', 'category', 'katalog', 'catalog', 'категория', 'группа'],
+  cost: ['kirim narxi', 'kirim narx', 'kirim', 'tannarx', 'cost', 'себестоимость', 'закупка'], price: ['sotuv narxi', 'sotuv narx', 'sotuv', 'selling price', 'розница'],
+  min: ['minimal qoldiq', 'minimal', 'min'], qty: ['qoldiq', 'miqdor', 'soni', 'qty', 'quantity', 'количество', 'остаток']};
+const IMP_AMBIG = ['narx', 'narxi', 'price', 'цена', 'summa'];   /* aniq emas: kirimmi yoki sotuvmi? dastur so‘raydi */
+const hn = h => String(h ?? '').toLowerCase().replace(/[.:*_]+/g, ' ').replace(/\s+/g, ' ').trim();
+function impGuess(h){
+  const k = hn(h);
+  for(const f in IMP_AL) if(IMP_AL[f].includes(k)) return {f, an: ''};
+  const known = [...new Set(products.flatMap(p => Object.keys(p.variant || {})))].find(n => hn(n) === k);
+  return known ? {f: 'attr', an: known} : {f: '', an: ''};
+}
+const impNum = s => { s = String(s).replace(/\s/g, '').replace(',', '.'); return /^\d+(\.\d+)?$/.test(s) ? +s : NaN; };
+function impValidate(T, M){
+  const errs = [], items = [], ci = {}, attrs = [];
+  M.forEach((m, i) => { if(m.f === 'attr') attrs.push({i, name: m.an.trim()}); else if(m.f && m.f !== 'skip') ci[m.f] = i; });
+  const hd = f => T.head[ci[f]] || IMP_F.find(x => x[0] === f)[1];
+  const seenName = new Map(), seenCode = new Map();
+  T.rows.forEach((r, k) => {
+    if(!r.some(x => x !== '')) return;
+    const row = k + 2, g = f => ci[f] === undefined ? '' : r[ci[f]] || '', bad = (f, msg) => errs.push({row, col: hd(f), msg});
+    const base = g('name'), cat = g('cat'), codes = parseCodes(g('code'));
+    if(!base) bad('name', 'Nomi bo‘sh. Mahsulot nomi majburiy.');
+    if(!cat) bad('cat', 'Kategoriya (katalog) bo‘sh. Majburiy.');
+    let cost = NaN, price = NaN, min, qty = 0;
+    for(const f of ['cost', 'price']){
+      const raw = g(f), v = impNum(raw);
+      if(raw === '') bad(f, `${IMP_F.find(x => x[0] === f)[1]} bo‘sh. Majburiy.`);
+      else if(isNaN(v)) bad(f, `Son bo‘lishi kerak, lekin «${raw}» yozilgan.`);
+      else if(f === 'cost') cost = Math.round(v); else price = Math.round(v);
+    }
+    if(!isNaN(price) && price <= 0) bad('price', 'Sotuv narxi 0 dan katta bo‘lishi kerak.');
+    if(!isNaN(cost) && !isNaN(price) && price < cost) bad('price', `Sotuv narxi (${fmt(price)}) kirim narxidan (${fmt(cost)}) past bo‘lmasligi kerak.`);
+    for(const f of ['min', 'qty']){
+      const raw = g(f); if(raw === '') continue; const v = impNum(raw);
+      if(isNaN(v) || v !== Math.floor(v)) bad(f, `Butun son bo‘lishi kerak, lekin «${raw}» yozilgan.`); else if(f === 'min') min = v; else qty = v;
+    }
+    const av = {}; attrs.forEach(a => { const v = r[a.i]; if(v) av[a.name] = v; });
+    const vals = Object.values(av), full = base ? base + (vals.length ? ' · ' + vals.join(' · ') : '') : '', key = full.toLowerCase();
+    if(base){
+      if(seenName.has(key)) bad('name', `«${full}» ${seenName.get(key)}-qatorda ham bor (takror). Bir xil tovar ikki marta yozilmasin.`); else seenName.set(key, row);
+    }
+    codes.forEach(c => {
+      const o = seenCode.get(c);
+      if(o && o.key !== key) bad('code', `Barcode ${c} ${o.row}-qatordagi «${o.name}» da ham bor.`); else if(!o) seenCode.set(c, {row, key, name: full});
+    });
+    const ex = full ? products.find(x => x.name.trim().toLowerCase() === key) : null;
+    codes.forEach(c => { const o = products.find(x => x !== ex && x.barcodes.includes(c)); if(o) bad('code', `Barcode ${c} omborda boshqa tovarda («${o.name}») bor.`); });
+    items.push({row, base, full, sku: g('sku'), codes, cat, cost, price, min, qty, av, ex});
   });
-  render(); return `Tayyor. Yangi tovar: ${neu}. Qoldiqqa qo‘shildi: ${merged}. O‘tkazib yuborilgan qator: ${bad}.`;
+  if(!items.length && !errs.length) errs.push({row: '—', col: '', msg: 'Faylda tovar qatorlari topilmadi.'});
+  return {errs, items, attrNames: attrs.map(a => a.name)};
+}
+function impApply(items){
+  const grp = new Map(); let neu = 0, merged = 0;
+  items.forEach(it => {
+    if(it.ex){
+      const ex = it.ex; ex.barcodes.push(...it.codes.filter(c => !ex.barcodes.includes(c)));
+      if(it.qty){ ex.stock[S.branch] = (ex.stock[S.branch] || 0) + it.qty; addLog('kirim', ex, S.branch, it.qty, it.qty * ex.cost, 'Importdan qoldiqqa qo‘shildi'); }
+      merged++; return;
+    }
+    let sku = it.sku; if(!sku){ if(Object.keys(it.av).length){ if(!grp.has(it.base.toLowerCase())) grp.set(it.base.toLowerCase(), genSku()); sku = grp.get(it.base.toLowerCase()); } else sku = genSku(); }
+    const np = {id: nextId++, name: it.full, sku, barcodes: it.codes.length ? it.codes : [genBarcode()], cat: it.cat, cost: it.cost, price: it.price, min: it.min === undefined ? 5 : it.min, stock: {b1: 0, b2: 0}};
+    if(Object.keys(it.av).length) np.variant = it.av;
+    np.stock[S.branch] = it.qty; products.push(np); addLog('yangi', np, S.branch, it.qty, it.qty * np.cost, 'Importdan qo‘shildi');
+    if(it.qty) addLog('kirim', np, S.branch, it.qty, it.qty * np.cost, 'Boshlang‘ich qoldiq (import)'); neu++;
+  });
+  return {neu, merged};
 }
 function importForm(){
-  const d = $('dlg');
-  d.innerHTML = `<h2 style="margin:0 0 4px">Tovarlarni Excel / CSV dan yuklash</h2><div class="sub">Ustunlar: Nomi, Artikul, Barcode, Kategoriya, Kirim narxi, Sotuv narxi, Minimal qoldiq, Qoldiq. Artikul va barcode bo‘sh bo‘lsa, o‘zi yaratiladi. Nomi yoki barcodi bir xil tovar mavjud qoldiqqa qo‘shiladi. Qoldiq ${esc(bname(S.branch))} ga yoziladi.</div>
-    <div class="upl" style="margin-top:12px"><label class="btn sm">Fayl tanlash<input class="vh" id="imf" type="file" accept=".xlsx,.xls,.csv"></label><button class="btn sm ghost" id="imt">Namuna yuklab olish</button></div>
-    <div id="imr" class="sub" style="margin-top:10px" role="status"></div><div style="text-align:right;margin-top:12px"><button class="btn ghost" id="imx">Yopish</button></div>`;
-  d.showModal(); $('imx').onclick = () => d.close();
-  $('imt').onclick = () => download('tovarlar-namuna.csv', new Blob(['\ufeffNomi,Artikul,Barcode,Kategoriya,Kirim narxi,Sotuv narxi,Minimal qoldiq,Qoldiq\r\nMisol tovar,,,Ichimliklar,4500,6500,10,24\r\n'], {type: 'text/csv;charset=utf-8'}));
-  $('imf').onchange = async e => { const f = e.target.files[0]; if(!f) return; try { $('imr').textContent = importRows(await readTable(f)); } catch(x) { $('imr').textContent = x.message || 'Faylni o‘qib bo‘lmadi.'; } };
+  const d = $('dlg'); d.style.width = 'min(780px,96vw)'; d.addEventListener('close', () => { d.style.width = ''; }, {once: true});
+  let T = null, M = [];
+  const frame = body => { d.innerHTML = `<h2 style="margin:0 0 4px">Tovarlarni Excel / CSV dan yuklash</h2><div id="imb">${body}</div>`; };
+  const stepPick = msg => {
+    frame(`<div class="sub">Fayl birinchi qatorida ustun nomlari bo‘lsin. Ustun nomlarini o‘zingiz istagancha yozing, keyingi qadamda dastur har birining nima ekanini so‘raydi. Qoldiq <b>${esc(bname(S.branch))}</b> ga yoziladi.</div>
+      <div class="alert warn" style="margin-top:10px"><b>Qoidalar:</b> nom, kategoriya (katalog), kirim narxi va sotuv narxi bo‘sh bo‘lmasin · sotuv narxi kirim narxidan past bo‘lmasin · barcode takrorlanmasin. <b>Bitta qatorda xato bo‘lsa, hech bir tovar qo‘shilmaydi</b> va xato qaysi qatorda ekani ko‘rsatiladi. Rang, razmer kabi qo‘shimcha ustunlar «sifat» sifatida qo‘shiladi.</div>
+      <div class="upl" style="margin-top:12px"><label class="btn sm">Fayl tanlash<input class="vh" id="imf" type="file" accept=".xlsx,.xls,.csv"></label><button class="btn sm ghost" id="imt">Namuna yuklab olish (Excel)</button></div>
+      <div class="err" id="imr" role="alert">${esc(msg || '')}</div><div style="text-align:right;margin-top:12px"><button class="btn ghost" id="imx">Yopish</button></div>`);
+    $('imx').onclick = () => d.close();
+    $('imt').onclick = sample;
+    $('imf').onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      try {
+        const raw = (await readTable(f)).filter(r => r && r.some(x => String(x ?? '').trim() !== ''));
+        if(raw.length < 2) return stepPick('Faylda ustun nomlari va kamida bitta tovar qatori bo‘lishi kerak.');
+        const n = Math.max(...raw.map(r => r.length)), cl = r => Array.from({length: n}, (_, i) => String(r[i] ?? '').trim());
+        T = {name: f.name, head: cl(raw[0]).map((h, i) => h || 'Ustun ' + (i + 1)), rows: raw.slice(1).map(cl)};
+        M = T.head.map(h => impGuess(h)); stepMap();
+      } catch(x){ stepPick(x.message || 'Faylni o‘qib bo‘lmadi.'); }
+    };
+  };
+  const sample = () => {
+    const rows = [['Nomi', 'Artikul', 'Barcode', 'Kategoriya', 'Kirim narxi', 'Sotuv narxi', 'Minimal qoldiq', 'Qoldiq', 'Rang', 'Razmer'],
+      ['Futbolka', '', '', 'Kiyim', 45000, 65000, 5, 10, 'Qizil', 'M'], ['Futbolka', '', '', 'Kiyim', 45000, 65000, 5, 8, 'Qora', 'L'], ['Suv 1 l', '', '', 'Ichimliklar', 1800, 3000, 20, 48, '', '']];
+    if(window.XLSX){ const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = rows[0].map(h => ({wch: Math.max(12, h.length + 4)})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Tovarlar'); XLSX.writeFile(wb, 'tovarlar-namuna.xlsx'); }
+    else download('tovarlar-namuna.csv', new Blob(['﻿sep=,\r\n' + rows.map(r => r.join(',')).join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8'}));
+  };
+  const stepMap = (msg) => {
+    const sc = $('imb') && $('imb').querySelector('#imm') ? $('imb').querySelector('#imm').scrollTop : 0;
+    frame(`<div class="sub">«${esc(T.name)}»: ${fmt(T.rows.length)} ta qator, ${T.head.length} ta ustun. Har bir ustun nima ekanini tanlang. <b>*</b> majburiy maydonlar.</div>
+      <div id="imm" style="max-height:52vh;overflow:auto;margin-top:8px">${T.head.map((h, i) => {
+        const m = M[i], amb = IMP_AMBIG.includes(hn(h)), sm = T.rows.slice(0, 3).map(r => r[i]).filter(Boolean).join(' · ');
+        return `<div style="display:grid;grid-template-columns:1fr 1.25fr;gap:8px 12px;align-items:start;border-bottom:1px solid var(--line);padding:9px 0">
+          <div><div class="nm">${esc(h)}</div><div class="sub">Namuna: ${esc(sm || '—')}</div>
+            ${amb && !m.f ? `<div class="sub" style="color:#9a6a0a">«${esc(h)}» — bu kirim narxi mi yoki sotuv narxi mi? Tanlang.</div>` : ''}</div>
+          <div><select data-mf="${i}" aria-label="${esc(h)} ustuni nima?"><option value="">— Bu nima ekanini tanlang —</option>
+            ${IMP_F.map(([k, l]) => `<option value="${k}" ${m.f === k ? 'selected' : ''}>${l}${IMP_REQ.includes(k) ? ' *' : ''}</option>`).join('')}
+            <option value="attr" ${m.f === 'attr' ? 'selected' : ''}>Yangi sifat (rang, razmer, hajm...)</option><option value="skip" ${m.f === 'skip' ? 'selected' : ''}>Kerak emas, o‘tkazib yuborish</option></select>
+            ${m.f === 'attr' ? `<div class="sub" style="margin-top:6px">Bu yangi sifat. Sifat nomi shumi?</div><input data-ma="${i}" value="${esc(m.an)}" placeholder="Masalan: Rang" aria-label="Sifat nomi">` : ''}</div></div>`; }).join('')}</div>
+      <div class="err" id="ime" role="alert">${esc(msg || '')}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="imb0">Boshqa fayl</button><button class="btn" id="imc">Tekshirish</button></div>`);
+    if($('imm')) $('imm').scrollTop = sc;
+    $('imb0').onclick = () => stepPick();
+    $('imm').onchange = e => {
+      const t = e.target;
+      if(t.dataset.mf !== undefined){ const m = M[+t.dataset.mf]; m.f = t.value; if(m.f === 'attr' && !m.an) m.an = T.head[+t.dataset.mf]; stepMap(); }
+      if(t.dataset.ma !== undefined) M[+t.dataset.ma].an = t.value;
+    };
+    $('imm').oninput = e => { if(e.target.dataset.ma !== undefined) M[+e.target.dataset.ma].an = e.target.value; };
+    $('imc').onclick = () => {
+      const un = M.map((m, i) => m.f ? null : T.head[i]).filter(Boolean);
+      if(un.length) return stepMap(`Ustun nima ekanini tanlang: ${un.map(x => '«' + x + '»').join(', ')}. Kerak bo‘lmasa «o‘tkazib yuborish» ni tanlang.`);
+      const miss = IMP_REQ.filter(f => !M.some(m => m.f === f)).map(f => IMP_F.find(x => x[0] === f)[1]);
+      if(miss.length) return stepMap(`Majburiy ustun tanlanmagan: ${miss.join(', ')}.`);
+      const dup = IMP_F.map(x => x[0]).filter(f => M.filter(m => m.f === f).length > 1).map(f => IMP_F.find(x => x[0] === f)[1]);
+      if(dup.length) return stepMap(`Bir nechta ustun bir xil maydonga tanlangan: ${dup.join(', ')}.`);
+      const an = M.filter(m => m.f === 'attr').map(m => m.an.trim());
+      if(an.some(x => !x)) return stepMap('Sifat nomini yozing.');
+      if(new Set(an.map(x => x.toLowerCase())).size !== an.length) return stepMap('Sifat nomlari bir xil bo‘lmasin.');
+      stepResult(impValidate(T, M));
+    };
+  };
+  const stepResult = res => {
+    if(res.errs.length){
+      const rows = res.errs.slice(0, 300);
+      frame(`<div class="alert bad"><b>${fmt(res.errs.length)} ta xato topildi. Hech bir tovar qo‘shilmadi.</b> Faylni tuzatib, qayta tanlang. Qator raqami Excel dagi qator raqamiga mos (1-qator — ustun nomlari).</div>
+        <div style="max-height:50vh;overflow:auto">${rows.map(x => `<div class="lg" style="grid-template-columns:auto 1fr"><span class="tag">${x.row}-qator</span><span>${x.col ? `<b>${esc(x.col)}:</b> ` : ''}${esc(x.msg)}</span></div>`).join('')}
+        ${res.errs.length > rows.length ? `<div class="sub">…yana ${fmt(res.errs.length - rows.length)} ta xato bor. Birinchilarini tuzatib, qayta tekshiring.</div>` : ''}</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="imk">Ustunlarga qaytish</button><button class="btn ghost" id="imn">Tuzatilgan faylni tanlash</button><button class="btn" id="imx">Yopish</button></div>`);
+      $('imk').onclick = () => stepMap(); $('imn').onclick = () => stepPick(); $('imx').onclick = () => d.close(); return;
+    }
+    const ne = res.items.filter(i => !i.ex).length, me = res.items.length - ne;
+    frame(`<div class="alert" style="background:var(--greenbg);border:1px solid var(--green)"><b>Xato yo‘q.</b> Tekshiruv muvaffaqiyatli o‘tdi.</div>
+      <div class="card" style="margin:10px 0"><div class="sumrow"><span>Jami qator</span><span>${fmt(res.items.length)} ta</span></div><div class="sumrow"><span>Yangi tovar</span><span>${fmt(ne)} ta</span></div>
+        <div class="sumrow"><span>Omborda bor (qoldiqqa qo‘shiladi)</span><span>${fmt(me)} ta</span></div>
+        ${res.attrNames.length ? `<div class="sumrow"><span>Sifatlar</span><span>${esc(res.attrNames.join(', '))}</span></div>` : ''}</div>
+      <div class="sub">Sifatli tovar nomi «Nomi · qiymat · qiymat» ko‘rinishida saqlanadi (masalan: Futbolka · Qizil · M).</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost" id="imk">Orqaga</button><button class="btn" id="imy">Hammasini qo‘shish (${fmt(res.items.length)})</button></div>`);
+    $('imk').onclick = () => stepMap();
+    $('imy').onclick = () => { const r = impApply(res.items); d.close(); toast(`Qo‘shildi: yangi ${fmt(r.neu)} ta, qoldiqqa qo‘shilgan ${fmt(r.merged)} ta`); render(); };
+  };
+  d.showModal(); stepPick();
 }
 
 /* ----- Barcode stiker (EAN-13) ----- */
@@ -1557,20 +1736,62 @@ const soundCard = () => `<div class="card"><h2 style="margin:0 0 4px">Ovozlar</h
 
 /* ---------- Google Sheets ulanishi ---------- */
 const SHEETS_KEY = 'savdo:sheets', TOK_KEY = 'savdo:tok', ME_KEY = 'savdo:me', REV_KEY = 'savdo:rev', HASH_KEY = 'savdo:hash';
-const WRITERS = ['super', 'filial', 'omborchi', 'kassir'];
+const WRITERS = ['super', 'admin', 'filial', 'omborchi', 'kassir'];
+/* ---- Maxsus rollar: ruxsatlar bo‘yicha yig‘iladi ---- */
+const customRoles = [], roleMap = {};   /* roleMap: login -> maxsus rol id (serverda esa asosiy rol saqlanadi) */
+const TAB_ORDER = ['kassa', 'sotuvlar', 'smena', 'ombor', 'kirim', 'inventar', 'transfer', 'xarajat', 'hisobot', 'ovoz', 'tarix', 'zaxira', 'filiallar', 'xodimlar'];
+const PERMS = [
+  ['sell', 'Kassada sotish', 'Kassa, sotuvlar va smena bo‘limlari', ['kassa', 'sotuvlar', 'smena'], {sell: true}],
+  ['own', 'Faqat o‘z cheklari va smenalarini ko‘rsin', 'Kassirlar uchun', [], {own: true}],
+  ['refund', 'Qaytarish va bekor qilishni o‘zi tasdiqlay oladi', 'Belgilanmasa, administrator logini va paroli so‘raladi', [], {refund: true}],
+  ['ombor', 'Omborni ko‘rish', '', ['ombor'], {}],
+  ['edit', 'Tovar qo‘shish, tahrirlash va Excel dan yuklash', '', ['ombor'], {edit: true}],
+  ['cost', 'Kirim narxi va ombor qiymatini ko‘rish', '', [], {cost: true}],
+  ['stock', 'Kirim, inventarizatsiya va transfer', '', ['kirim', 'inventar', 'transfer'], {stockops: true}],
+  ['approve', 'Inventarizatsiyani tasdiqlash va kassirlar hisoboti', '', [], {admin: true}],
+  ['xview', 'Xarajatlarni ko‘rish', '', ['xarajat'], {}],
+  ['xadd', 'Xarajat kiritish va bekor qilish', '', ['xarajat'], {expense: true}],
+  ['report', 'Hisobotlar, foyda, Excel va PDF', '', ['hisobot'], {report: true}],
+  ['voice', 'Ovozli yordamchi', '', ['ovoz'], {}],
+  ['hist', 'Operatsiyalar tarixi', '', ['tarix'], {}],
+  ['all', 'Barcha filiallarni ko‘rish va almashtirish', '', [], {all: true}],
+  ['backup', 'Zaxira nusxa', '', ['zaxira'], {backup: true}],
+  ['staff', 'Xodim akkauntlari va rollarni boshqarish', 'Faqat boshlovchi bera oladi', ['xodimlar'], {staff: true}]
+];
+const PRESETS = {
+  'Kassir': ['sell', 'own', 'ombor', 'voice'],
+  'Omborchi': ['ombor', 'edit', 'cost', 'stock', 'voice', 'hist'],
+  'Hisobot ko‘ruvchi': ['ombor', 'cost', 'xview', 'report', 'all', 'hist', 'voice'],
+  'Menejer': ['sell', 'refund', 'ombor', 'edit', 'cost', 'stock', 'approve', 'xview', 'xadd', 'report', 'voice', 'hist']
+};
+function buildRole(cr){
+  const on = PERMS.filter(p => cr.perms.includes(p[0])), tabs = new Set(), fl = {};
+  on.forEach(p => { p[3].forEach(t => tabs.add(t)); Object.assign(fl, p[4]); });
+  const write = !!(fl.sell || fl.edit || fl.stockops || fl.expense);
+  return {edit: false, cost: false, all: false, ...fl, label: cr.name, desc: cr.desc || '', custom: true, id: cr.id, write, base: fl.sell ? 'kassir' : write ? 'omborchi' : 'viewer', tabs: [...TAB_ORDER.filter(t => tabs.has(t)), 'profil']};
+}
+function regRoles(){
+  Object.keys(roles).filter(k => roles[k].custom).forEach(k => delete roles[k]);
+  customRoles.forEach(c => { roles['c_' + c.id] = buildRole(c); });
+}
+const srvRole = k => roles[k]?.custom ? roles[k].base : k;
+const setMap = (login, k) => { if(roles[k]?.custom) roleMap[login] = roles[k].id; else delete roleMap[login]; };
+const assignable = () => [...(R().owner ? ['admin'] : []), 'filial', 'omborchi', 'kassir', 'viewer', ...customRoles.map(c => 'c_' + c.id)];
+const canWriteRole = k => WRITERS.includes(k) || !!roles[k]?.write;
+let RAWU = null;
+
+
 const SCRIPT_RE = /^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/;
 const LOGIN_RE = /^[a-z0-9._-]{3,30}$/, loginOk = l => LOGIN_RE.test(l);
 const DEV = (() => { let d = lsGet('savdo:dev'); if(!d){ d = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); lsSet('savdo:dev', d); } return d; })();
 const API = {url: lsGet(SHEETS_KEY) || '', tok: lsGet(TOK_KEY) || ''};
-const SY = {rev: +lsGet(REV_KEY) || 0, hash: lsGet(HASH_KEY) || '', busy: false, err: '', ro: false, timer: 0, hb: 0, ask: false, mrev: +lsGet('savdo:mrev') || 0};
+const SY = {rev: +lsGet(REV_KEY) || 0, hash: lsGet(HASH_KEY) || '', busy: false, err: '', ro: false, timer: 0, hb: 0, ask: false};
 const PENDING = {branch: ''};
-const AVA = (() => { try { return JSON.parse(lsGet('savdo:ava') || '{}'); } catch(e){ return {}; } })();
 const CLEAN = JSON.stringify({v: 4, counters: {nextId: 1, logId: 1, shiftNo: 1, saleNo: 1001, refNo: 1, invNo: 1, trNo: 1, exNo: 1},
   branches: [{id: 'b1', name: 'Asosiy filial'}], products: [], log: [], sales: [], refunds: [], shifts: [], inventories: [], transfers: [], expenses: [], voided: {}});
 
 async function api(a, d = {}, authed = true){
   if(!API.url) throw Object.assign(new Error('Sheets ulanmagan'), {code: 'nourl'});
-  if(a === 'pull') d = {mrev: SY.mrev, ...d};
   let j;
   try {
     const r = await fetch(API.url, {method: 'POST', body: JSON.stringify({a, t: authed ? API.tok : undefined, ...d})});
@@ -1588,26 +1809,14 @@ function h53(str){
 }
 function stateJson(){ const o = JSON.parse(makeBackup()); delete o.users; delete o.unsynced; delete o.at; return JSON.stringify(o); }
 function markSynced(hh, rev){ SY.hash = hh; SY.rev = rev; lsSet(REV_KEY, String(rev)); lsSet(HASH_KEY, hh); }
-const toLocalUser = p => ({login: p.login, name: p.name, role: p.role, branch: p.branch, off: p.active === false, ...(AVA[p.login] ? {avatar: AVA[p.login]} : {})});
-function setUsers(list){ users.splice(0, users.length, ...list.filter(p => roles[p.role]).map(toLocalUser)); }
+const toLocalUser = p => ({login: p.login, name: p.name, role: p.role, branch: p.branch, off: p.active === false});
+function setUsers(list){ RAWU = list; users.splice(0, users.length, ...list.map(p => { const c = roleMap[p.login]; return {...p, role: c && roles['c_' + c] ? 'c_' + c : p.role}; }).filter(p => roles[p.role]).map(toLocalUser)); }
 function applyBrandRemote(b){
   Object.assign(BRAND, {shop: b.shop || BRAND.shop, tagline: b.tagline || '', color: b.color || BRAND.color, lcolor: b.lcolor || b.color || BRAND.lcolor, demo: false, set: true});
   saveBrand(); applyBrand();
 }
-function applyMedia(p){
-  if(!p.media) return false;
-  BRAND.logo = p.media.logo || ''; BRAND.bg = p.media.bg || '';
-  Object.keys(AVA).forEach(k => delete AVA[k]); Object.assign(AVA, p.media.av || {});
-  lsSet('savdo:ava', JSON.stringify(AVA)); SY.mrev = p.mrev; lsSet('savdo:mrev', String(p.mrev));
-  saveBrand(); applyBrand(); return true;
-}
-function saveMedia(kind, v){
-  if(kind === 'av' && S.user){ if(v) AVA[S.user.login] = v; else delete AVA[S.user.login]; lsSet('savdo:ava', JSON.stringify(AVA)); }
-  api('media_set', {kind, data: v || ''}).then(r => { SY.mrev = r.mrev; lsSet('savdo:mrev', String(r.mrev)); }).catch(x => toast('Rasm Sheets’ga saqlanmadi: ' + x.message));
-}
 function applyRemote(p){
   if(p.brand) applyBrandRemote(p.brand);
-  applyMedia(p);
   if(Array.isArray(p.users)) setUsers(p.users);
   if(p.state){ restoreBackup(p.state); markSynced(h53(stateJson()), p.rev); }
   else if(!p.same && p.rev > 0) throw new Error('Ma’lumotni yuklab bo‘lmadi. Birozdan keyin qayta urinib ko‘ring.');
@@ -1655,7 +1864,7 @@ async function conflict(){
   updateNet();
 }
 async function takeOver(){
-  if(!S.user || !WRITERS.includes(S.user.role) || !SY.ro) return;
+  if(!S.user || !canWriteRole(S.user.role) || !SY.ro) return;
   if(!await ask('Shu qurilmada ishlash', 'Boshqa qurilma faqat ko‘rish rejimiga o‘tadi. Davom etamizmi?', 'Ha')) return;
   try { const p = await api('pull', {device: DEV, force: true}); SY.ro = !p.lease.mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
   catch(x){ toast('Bajarib bo‘lmadi: ' + x.message); }
@@ -1667,9 +1876,9 @@ function startHb(){
     if(!S.user || SY.busy || !S.online) return;
     try {
       const p = await api('pull', {device: DEV, since: SY.rev});
-      const canWrite = WRITERS.includes(S.user.role), mine = canWrite && p.lease.mine;
+      const canWrite = canWriteRole(S.user.role), mine = canWrite && p.lease.mine;
       if(!p.same && (SY.ro || !mine)){ SY.ro = !mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
-      else { SY.ro = !mine; const m = applyMedia(p); if(Array.isArray(p.users)){ setUsers(p.users); S.user = users.find(x => x.login === S.user.login) || S.user; } if(m) render(); }
+      else { SY.ro = !mine; if(Array.isArray(p.users)){ setUsers(p.users); S.user = users.find(x => x.login === S.user.login) || S.user; } }
       updateNet();
     } catch(x){ if(x.code === 'auth') sessionLost(); }
   }, 45000);
@@ -1829,7 +2038,7 @@ function viewOvoz(){
 /* ----- OFLAYN REJIM (sinxronlash simulyatsiyasi) ----- */
 function updateNet(){
   const el = $('net'); if(!el) return;
-  const n = unsynced.size, canWrite = S.user && WRITERS.includes(S.user.role);
+  const n = unsynced.size, canWrite = S.user && canWriteRole(S.user.role);
   let t, off = false;
   if(SY.ro){ t = canWrite ? 'Faqat ko‘rish · boshqa qurilma faol (bosing)' : 'Faqat ko‘rish'; off = true; }
   else if(!S.online){ t = `Oflayn${n ? ` · ${n} ta sotuv navbatda` : ''}`; off = true; }
@@ -1849,7 +2058,7 @@ const dateKeys = new Set(['t', 'at', 'createdAt', 'openedAt', 'closedAt', 'start
 const revive = (k, v) => dateKeys.has(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : v;
 function makeBackup(){
   return JSON.stringify({v: 4, at: new Date(), counters: {nextId, logId, shiftNo, saleNo, refNo, invNo, trNo, exNo},
-    branches, users, products, log, sales, refunds, shifts, inventories, transfers, expenses, voided, unsynced: [...unsynced]});
+    branches, users, customRoles, roleMap, products, log, sales, refunds, shifts, inventories, transfers, expenses, voided, unsynced: [...unsynced]});
 }
 function restoreBackup(text){
   const d = JSON.parse(text, revive);
@@ -1857,6 +2066,7 @@ function restoreBackup(text){
   if(!d || !need.every(k => Array.isArray(d[k])) || !d.counters) throw new Error('Fayl formati noto‘g‘ri');
   const put = (arr, src) => arr.splice(0, arr.length, ...src);
   const fz = o => Object.freeze(o);
+  put(customRoles, Array.isArray(d.customRoles) ? d.customRoles : []); Object.keys(roleMap).forEach(k => delete roleMap[k]); Object.assign(roleMap, d.roleMap || {}); regRoles();
   if(Array.isArray(d.branches) && d.branches.length) put(branches, d.branches);
   if(Array.isArray(d.users) && d.users.some(u => u.role === 'super')) put(users, d.users);
   put(products, d.products);
@@ -1872,6 +2082,7 @@ function restoreBackup(text){
   ({nextId, logId, shiftNo, saleNo, refNo, invNo, trNo, exNo} = d.counters);
   unsynced.clear(); (d.unsynced || []).forEach(x => unsynced.add(x));
   S.cart = []; S.dval = 0; S.card = 0; S.given = 0; S.trd = [];
+  if(RAWU && !(Array.isArray(d.users) && d.users.some(u => u.role === 'super'))) setUsers(RAWU);
 }
 function startBk(){
   if(bkTimer) clearInterval(bkTimer);

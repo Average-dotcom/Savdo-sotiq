@@ -181,7 +181,6 @@ body{background-image:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--t
 @media (prefers-reduced-motion:no-preference){.stat{animation:rise .5s ease both}.stat:nth-child(2){animation-delay:.08s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.24s}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.81.1/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -205,7 +204,7 @@ const roles = {
   viewer:   {label:'Hisobot ko‘ruvchi',       tabs:['sotuvlar','smena','ombor','xarajat','hisobot','ovoz','tarix'],                                                 edit:false, cost:true,  all:true,  report:true}
 };
 Object.values(roles).forEach(r => r.tabs.push('profil'));
-const users = [];   /* kirgandan keyin Supabase profillaridan to‘ladi */
+const users = [];   /* kirgandan keyin Google Sheets (Users varag‘i) dan to‘ladi */
 let nextId = 1;
 const mk = (name,codes,cat,cost,price,min,s1,s2) => ({id:nextId++,name,barcodes:codes,cat,cost,price,min,stock:{b1:s1,b2:s2}});
 const products = [
@@ -252,23 +251,13 @@ function showLogin(){
   </form></section></div>`;
   typeIn($('tg'));
   $('pt').onclick = () => { const i = $('ps'), sh = i.type === 'password'; i.type = sh ? 'text' : 'password'; $('pt').textContent = sh ? 'Yashir' : 'Ko‘rsat'; };
-  let fails = 0, lockUntil = 0;
+  $('lf').insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost sm" id="chg" style="margin-top:12px">Google Sheets ulanishini o‘zgartirish</button>');
+  $('chg').onclick = () => { API.url = ''; API.tok = ''; lsSet(SHEETS_KEY, ''); lsSet(TOK_KEY, ''); showConnect(); };
   $('lf').onsubmit = async e => {
     e.preventDefault();
-    const wait = Math.ceil((lockUntil - Date.now()) / 1000);
-    if(wait > 0){ $('le').textContent = `Juda ko‘p xato urinish. ${wait} soniyadan keyin qayta urinib ko‘ring.`; return; }
     const btn = $('lf').querySelector('button.btn'); btn.disabled = true; $('le').textContent = '';
-    const {error} = await sb.auth.signInWithPassword({email: toEmail($('lg').value), password: $('ps').value});
-    if(error){
-      btn.disabled = false;
-      if(!(error.status === 400 || error.code === 'invalid_credentials')){ $('le').textContent = 'Serverga ulanib bo‘lmadi. Internetni tekshiring.'; return; }
-      fails++; if(fails >= 5){ lockUntil = Date.now() + Math.min(300, 15 * 2 ** (fails - 5)) * 1000; }
-      $('le').textContent = fails >= 5 ? 'Juda ko‘p xato urinish. Birozdan keyin qayta urinib ko‘ring.' : 'Login yoki parol noto‘g‘ri. Qayta urinib ko‘ring.'; return;
-    }
-    const r = await enterApp();
-    if(r === true){ fails = 0; return; }
-    btn.disabled = false;
-    $('le').textContent = r === 'noprofile' ? 'Akkaunt do‘konga biriktirilmagan yoki o‘chirilgan.' : 'Ma’lumotlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.';
+    try { await enterWith(await api('login', {login: $('lg').value.trim(), pass: $('ps').value}, false)); }
+    catch(x){ btn.disabled = false; $('le').textContent = x.net ? 'Serverga ulanib bo‘lmadi. Internetni tekshiring.' : x.message; }
   };
   $('lg').focus();
 }
@@ -292,7 +281,7 @@ function render(){
   ${gList.length > 1 ? `<div class="grps" role="tablist" aria-label="Bo‘limlar">${gList.map(g => `<button class="${g===S.grp?'on':''}" data-grp="${g}"><span class="ic" aria-hidden="true">${groupMeta[g].icon}</span>${groupMeta[g].label}</button>`).join('')}</div>` : ''}
   <div class="tabs" role="tablist">${curTabs.map(t=>`<button role="tab" class="${t===S.tab?'on':''}" data-tab="${t}"><span class="ic" aria-hidden="true">${tabIcons[t] || ''}</span>${tabNames[t]}${t==='ovoz' ? ' <span class="beta">BETA</span>' : ''}</button>`).join('')}</div>
   <main id="main"></main>`;
-  $('out').onclick = async () => { try { await sb.auth.signOut(); } catch(e) {} S.user = null; showLogin(); };
+  $('out').onclick = async () => { await pushNow(); clearInterval(SY.hb); API.tok = ''; lsSet(TOK_KEY, ''); S.user = null; showLogin(); };
   $('nt').onclick = () => setOnline(!S.online); updateNet(); if(!bkTimer) startBk();
   if($('bsel')) $('bsel').onchange = e => { S.branch = e.target.value; render(); };
   document.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { S.grp = b.dataset.grp; S.tab = r.tabs.find(t => grpOf(t) === S.grp); render(); });
@@ -681,7 +670,8 @@ function updateTotals(){
   $('pb').disabled = !c.lines.length;
 }
 function checkout(){
-  if(S.paying) return;                       // takroriy bosishdan himoya
+  if(S.paying) return;
+  if(SY.ro) return toast('Bu qurilma faqat ko‘rish rejimida. Sotish uchun chipni bosib, shu qurilmaga o‘ting.');                       // takroriy bosishdan himoya
   const sh = openShift(); if(!sh) return toast('Smena yopilgan. Avval smenani oching.');
   const c = calc(); if(!c.lines.length) return;
   for(const l of c.lines) if(l.qty > stockOf(l.p)) return sfx('extra') || toast(`«${l.p.name}»: omborda faqat ${fmt(stockOf(l.p))} dona qolgan`);
@@ -772,12 +762,10 @@ function refundForm(s, mode){
     const err = m => { $('re').textContent = m; };
     let appr = S.user;
     if(!r.refund){
-      const cand = users.find(u => !u.off && u.login.toLowerCase() === $('al').value.trim().toLowerCase() && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
+      const cand = users.find(u => !u.off && u.login === $('al').value.trim().toLowerCase() && roles[u.role].refund && (u.role === 'super' || u.branch === S.branch));
       if(!cand) return err('Administrator logini yoki paroli noto‘g‘ri.');
-      /* parol alohida (vaqtinchalik) ulanish bilan tekshiriladi, joriy kassir seansi buzilmaydi */
-      const tmp = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: false, autoRefreshToken: false, detectSessionInUrl: false}});
-      const chk = await tmp.auth.signInWithPassword({email: toEmail(cand.login), password: $('ap').value});
-      if(chk.error) return err('Administrator logini yoki paroli noto‘g‘ri.');
+      try { await api('verify', {login: cand.login, pass: $('ap').value}, false); }
+      catch(x){ return err(x.net ? 'Serverga ulanib bo‘lmadi.' : 'Administrator logini yoki paroli noto‘g‘ri.'); }
       appr = cand;
     }
     const reason = $('rr').value.trim(); if(!reason) return err('Sababni yozing.');
@@ -1275,11 +1263,11 @@ function viewFilial(){
     }
   };
 }
+async function reloadUsers(){ const r = await api('users'); setUsers(r.users); }
 function viewXodim(){
   if(!R().owner) return;
-  $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Xodimlar</h2><div class="sub">Xodim akkauntlarini ochish keyingi bosqichda serverga ulanadi. Hozircha faqat egasi kira oladi.</div></div>`; return;
   $('main').innerHTML = `<div class="card"><h2 style="margin:0 0 6px">Yangi xodim akkaunti</h2>
-    <label for="xn">Ism</label><input id="xn"><label for="xl">Login</label><input id="xl" autocapitalize="none"><label for="xp">Parol (kamida 4 belgi)</label><input id="xp" type="password">
+    <label for="xn">Ism</label><input id="xn"><label for="xl">Login (lotin harf, raqam, nuqta, tire)</label><input id="xl" autocapitalize="none"><label for="xp">Parol (kamida 8 belgi)</label><input id="xp" type="password">
     <label for="xr">Rol</label><select id="xr">${roleOpts('kassir')}</select><div class="sub" id="xd"></div>
     <label for="xb">Filial</label><select id="xb">${branchOpts(S.branch)}</select>
     <div class="err" id="xe" role="alert"></div><button class="btn" id="xadd">Akkaunt ochish</button></div>
@@ -1287,24 +1275,25 @@ function viewXodim(){
     <div class="sub">${esc(u.login)} · ${esc(roles[u.role].label)} · ${esc(bname(u.branch))}</div></div>
     ${u.role === 'super' ? '' : `<div><button class="btn sm ghost" data-eu="${esc(u.login)}">Tahrirlash</button> <button class="btn sm ghost" data-ou="${esc(u.login)}">${u.off ? 'Yoqish' : 'O‘chirish'}</button></div>`}</div>`).join('');
   const dd = () => $('xd').textContent = roleDesc[$('xr').value]; dd(); $('xr').onchange = dd;
+  const run = async (fn, okMsg) => { try { await fn(); await reloadUsers(); toast(okMsg); viewXodim(); } catch(x){ toast(x.net ? 'Serverga ulanib bo‘lmadi' : x.message); } };
   $('xadd').onclick = () => {
-    const n = $('xn').value.trim(), l = $('xl').value.trim(), p = $('xp').value, er = m => $('xe').textContent = m;
+    const n = $('xn').value.trim(), l = $('xl').value.trim().toLowerCase(), p = $('xp').value, er = m => $('xe').textContent = m;
     if(!n || !l) return er('Ism va loginni yozing.');
-    if(p.length < 4) return er('Parol kamida 4 belgi bo‘lsin.');
-    if(users.some(u => u.login.toLowerCase() === l.toLowerCase())) return er('Bu login band.');
-    users.push({login: l, pass: p, name: n, role: $('xr').value, branch: $('xb').value});
-    toast('Akkaunt ochildi: ' + l); viewXodim();
+    if(!loginOk(l)) return er('Login 3–30 belgi: lotin harf, raqam, nuqta, tire.');
+    if(p.length < 8) return er('Parol kamida 8 belgi bo‘lsin.');
+    if(users.some(u => u.login === l)) return er('Bu login band.');
+    run(() => api('user_save', {isNew: true, login: l, name: n, pass: p, role: $('xr').value, branch: $('xb').value, active: true}), 'Akkaunt ochildi: ' + l);
   };
   $('main').onclick = async e => {
     const b = e.target.closest('button'); if(!b) return;
-    if(b.dataset.ou){ const u = users.find(x => x.login === b.dataset.ou); u.off = !u.off; toast(u.off ? 'Akkaunt o‘chirildi' : 'Akkaunt yoqildi'); return viewXodim(); }
+    if(b.dataset.ou){ const u = users.find(x => x.login === b.dataset.ou); return run(() => api('user_save', {login: u.login, name: u.name, role: u.role, branch: u.branch, active: !!u.off}), u.off ? 'Akkaunt yoqildi' : 'Akkaunt o‘chirildi'); }
     if(!b.dataset.eu) return;
     const u = users.find(x => x.login === b.dataset.eu);
     if(await ask('Xodimni tahrirlash', `<label for="eu-n">Ism</label><input id="eu-n" value="${esc(u.name)}"><label for="eu-r">Rol</label><select id="eu-r">${roleOpts(u.role)}</select>
       <label for="eu-b">Filial</label><select id="eu-b">${branchOpts(u.branch)}</select><label for="eu-p">Yangi parol (o‘zgartirmasangiz bo‘sh qoldiring)</label><input id="eu-p" type="password">`, 'Saqlash')){
       const n = $('eu-n').value.trim(), p = $('eu-p').value;
-      if(!n) return toast('Ism bo‘sh bo‘lmasin'); if(p && p.length < 4) return toast('Parol kamida 4 belgi bo‘lsin');
-      u.name = n; u.role = $('eu-r').value; u.branch = $('eu-b').value; if(p) u.pass = p; toast('Saqlandi'); viewXodim();
+      if(!n) return toast('Ism bo‘sh bo‘lmasin'); if(p && p.length < 8) return toast('Parol kamida 8 belgi bo‘lsin');
+      run(() => api('user_save', {login: u.login, name: n, role: $('eu-r').value, branch: $('eu-b').value, active: !u.off, pass: p}), 'Saqlandi');
     }
   };
 }
@@ -1345,7 +1334,7 @@ function applyCfg(cfg){
   saveBrand(); saveData();
   return true;
 }
-const saveBrand = () => lsSet(LS.brand, JSON.stringify(BRAND)), saveData = () => lsSet(LS.data, makeBackup());
+const saveBrand = () => lsSet(LS.brand, JSON.stringify(BRAND)), saveData = () => { lsSet(LS.data, makeBackup()); schedulePush(); };
 function applyBrand(){
   document.title = BRAND.shop;
   let ic = document.querySelector('link[rel=icon]'); if(!ic){ ic = document.createElement('link'); ic.rel = 'icon'; document.head.appendChild(ic); }
@@ -1441,30 +1430,26 @@ function viewProfil(){
     i.onchange = async () => { try { apply(await readImg(i.files[0], max, q)); toast(saveBrand() && saveData() ? 'Rasm saqlandi' : 'Rasm saqlanmadi: brauzer xotirasi to‘la'); applyBrand(); render(); } catch(e) { toast('Rasmni o‘qib bo‘lmadi'); } };
     const x = $(id + 'x'); if(x) x.onclick = () => { apply(null); saveBrand(); saveData(); applyBrand(); render(); };
   };
-  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; sb.rpc('update_my_profile', {p_name: u.name, p_avatar: u.avatar || null}); });
+  bind('uav', 256, .85, v => { if(v) u.avatar = v; else delete u.avatar; });
   if(r.owner){ bind('ulg', 256, 0, v => BRAND.logo = v || ''); bind('ubg', 1400, .72, v => BRAND.bg = v || ''); }
   $('psave').onclick = async () => {
     const n = $('pn').value.trim(), np = $('pw').value, er = m => $('pre').textContent = m;
     if(!n) return er('Ismni yozing.');
     if(np && np.length < 8) return er('Yangi parol kamida 8 belgi bo‘lsin.');
-    if(np){
-      const chk = await sb.auth.signInWithPassword({email: toEmail(u.login), password: $('pc').value});
-      if(chk.error) return er('Joriy parol noto‘g‘ri.');
-      const up = await sb.auth.updateUser({password: np}); if(up.error) return er('Parol o‘zgarmadi: ' + up.error.message);
-    }
-    const {error} = await sb.rpc('update_my_profile', {p_name: n, p_avatar: u.avatar || null});
-    if(error) return er('Saqlanmadi: ' + error.message);
-    u.name = n; saveData(); toast('Profil saqlandi'); render();
+    try {
+      const r = await api('me_save', {name: n, oldPass: $('pc').value, newPass: np});
+      API.tok = r.token; lsSet(TOK_KEY, r.token); u.name = n; saveData(); toast('Profil saqlandi'); render();
+    } catch(x){ er(x.net ? 'Serverga ulanib bo‘lmadi.' : x.message); }
   };
   if(r.owner){
     $('bsave').onclick = () => {
       const n = $('bs').value.trim(); if(!n) return toast('Do‘kon nomini yozing');
       Object.assign(BRAND, {shop: n, tagline: $('bt').value.trim(), color: getColor('bc'), lcolor: getColor('lc')});
-      applyBrand(); saveBrand(); toast('Saqlandi'); render();
+      applyBrand(); saveBrand(); api('brand_save', {brand: {shop: BRAND.shop, tagline: BRAND.tagline, color: BRAND.color, lcolor: BRAND.lcolor}}).catch(() => toast('Sheets’ga saqlanmadi')); toast('Saqlandi'); render();
     };
     $('breset').onclick = async () => {
-      if(await ask('Qayta sozlash', 'Hamma ma’lumot o‘chadi. Davom etasizmi?', 'Ha, o‘chirish')){
-        BRAND.set = false; try { await sb.auth.signOut(); } catch(e) {} try { localStorage.removeItem(LS.brand); localStorage.removeItem(LS.data); } catch(e) {} location.reload();
+      if(await ask('Qurilmani tozalash', 'Shu qurilmadagi nusxa o‘chadi. Google Sheets’dagi ma’lumot saqlanib qoladi va qayta kirganda yuklanadi. Davom etasizmi?', 'Ha, tozalash')){
+        BRAND.set = false; try { [LS.brand, LS.data, TOK_KEY, REV_KEY, HASH_KEY, ME_KEY].forEach(k => localStorage.removeItem(k)); } catch(e) {} location.reload();
       }
     };
   }
@@ -1570,88 +1555,184 @@ const soundCard = () => `<div class="card"><h2 style="margin:0 0 4px">Ovozlar</h
   <label for="sdv">Balandligi</label><input id="sdv" type="range" min="0.1" max="1" step="0.05" value="${SND.vol}">
   <div class="bar" style="margin-top:10px"><button type="button" class="btn sm ghost" data-snd="ok">Normal tovar</button><button type="button" class="btn sm ghost" data-snd="error">Xato kod</button><button type="button" class="btn sm ghost" data-snd="extra">Ortiqcha / yetmaydi</button><button type="button" class="btn sm ghost" data-snd="sale">Savdo tugadi</button></div></div>`;
 
-/* ---------- Supabase: kirish va do‘kon yaratish ---------- */
-const SB_URL = 'https://hzicowfesgxgkhjwiubd.supabase.co';
-const SB_KEY = 'sb_publishable_CLDd0zH9sJHYvMAKk4j3Nw_9flEr6pt';   /* ochiq kalit; secret kalitni bu yerga YOZMANG */
-const LOGIN_DOMAIN = 'savdo-tizimi.app';   /* faqat ichki; “Email address is invalid” chiqsa, shuni o‘zgartiring (admin.html da emas, faqat bu yerda) */
-const sb = window.supabase.createClient(SB_URL, SB_KEY);
-const toEmail = l => String(l).trim().toLowerCase() + '@' + LOGIN_DOMAIN;
-const loginOk = l => /^[a-z0-9._-]{3,30}$/.test(l);
-const toLocalUser = p => ({id: p.user_id, login: p.login, name: p.name, role: p.role === 'owner' ? 'super' : p.role, branch: p.branch_id, off: p.active === false, ...(p.avatar ? {avatar: p.avatar} : {})});
-function resetLocalData(){
-  [products, log, sales, refunds, shifts, inventories, transfers, expenses].forEach(a => a.splice(0, a.length));
-  Object.keys(voided).forEach(k => delete voided[k]); unsynced.clear();
+/* ---------- Google Sheets ulanishi ---------- */
+const SHEETS_KEY = 'savdo:sheets', TOK_KEY = 'savdo:tok', ME_KEY = 'savdo:me', REV_KEY = 'savdo:rev', HASH_KEY = 'savdo:hash';
+const WRITERS = ['super', 'filial', 'omborchi', 'kassir'];
+const SCRIPT_RE = /^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/;
+const LOGIN_RE = /^[a-z0-9._-]{3,30}$/, loginOk = l => LOGIN_RE.test(l);
+const DEV = (() => { let d = lsGet('savdo:dev'); if(!d){ d = Math.random().toString(36).slice(2, 10) + Date.now().toString(36); lsSet('savdo:dev', d); } return d; })();
+const API = {url: lsGet(SHEETS_KEY) || '', tok: lsGet(TOK_KEY) || ''};
+const SY = {rev: +lsGet(REV_KEY) || 0, hash: lsGet(HASH_KEY) || '', busy: false, err: '', ro: false, timer: 0, hb: 0, ask: false};
+const PENDING = {branch: ''};
+const CLEAN = JSON.stringify({v: 4, counters: {nextId: 1, logId: 1, shiftNo: 1, saleNo: 1001, refNo: 1, invNo: 1, trNo: 1, exNo: 1},
+  branches: [{id: 'b1', name: 'Asosiy filial'}], products: [], log: [], sales: [], refunds: [], shifts: [], inventories: [], transfers: [], expenses: [], voided: {}});
+
+async function api(a, d = {}, authed = true){
+  if(!API.url) throw Object.assign(new Error('Sheets ulanmagan'), {code: 'nourl'});
+  let j;
+  try {
+    const r = await fetch(API.url, {method: 'POST', body: JSON.stringify({a, t: authed ? API.tok : undefined, ...d})});
+    j = await r.json();
+  } catch(e){ throw Object.assign(new Error('Serverga ulanib bo‘lmadi'), {net: true}); }
+  if(j && j.err) throw Object.assign(new Error(j.err), {code: j.code || ''});
+  return j;
+}
+function h53(str){
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for(let i = 0, ch; i < str.length; i++){ ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return String(4294967296 * (2097151 & h2) + (h1 >>> 0));
+}
+function stateJson(){ const o = JSON.parse(makeBackup()); delete o.users; delete o.unsynced; delete o.at; return JSON.stringify(o); }
+function markSynced(hh, rev){ SY.hash = hh; SY.rev = rev; lsSet(REV_KEY, String(rev)); lsSet(HASH_KEY, hh); }
+const toLocalUser = p => ({login: p.login, name: p.name, role: p.role, branch: p.branch, off: p.active === false});
+function setUsers(list){ users.splice(0, users.length, ...list.filter(p => roles[p.role]).map(toLocalUser)); }
+function applyBrandRemote(b){
+  Object.assign(BRAND, {shop: b.shop || BRAND.shop, tagline: b.tagline || '', color: b.color || BRAND.color, lcolor: b.lcolor || b.color || BRAND.lcolor, demo: false, set: true});
+  saveBrand(); applyBrand();
+}
+function applyRemote(p){
+  if(p.brand) applyBrandRemote(p.brand);
+  if(Array.isArray(p.users)) setUsers(p.users);
+  if(p.state){ restoreBackup(p.state); markSynced(h53(stateJson()), p.rev); }
+  else if(!p.same && p.rev > 0) throw new Error('Ma’lumotni yuklab bo‘lmadi. Birozdan keyin qayta urinib ko‘ring.');
+  else if(!p.same){   /* faqat butunlay yangi do‘kon (rev = 0): bo‘sh holatdan boshlaymiz */
+    restoreBackup(CLEAN); if(PENDING.branch) branches[0].name = PENDING.branch; PENDING.branch = '';
+    SY.rev = p.rev; SY.hash = ''; lsSet(REV_KEY, String(p.rev)); lsSet(HASH_KEY, '');
+  }
+  lsSet(LS.data, makeBackup());
 }
 function startAs(u){
   lastLogin = new Date(); ping('kirish'); S.user = u; S.branch = u.branch; S.tab = roles[u.role].tabs[0]; S.grp = grpOf(S.tab);
   S.q = ''; S.cat = ''; S.low = false; S.cart = []; S.dval = 0; S.card = 0; S.given = 0; render();
 }
-/* true = kirdi; 'auth' | 'net' | 'noprofile' = kirmadi */
-async function enterApp(){
-  const {data: {user}, error: ue} = await sb.auth.getUser();
-  if(!user){ return ue && ue.status !== 401 && ue.status !== 403 ? 'net' : 'auth'; }
-  const {data: me, error: me_e} = await sb.from('profiles').select('user_id,shop_id,login,name,role,branch_id,active,avatar').eq('user_id', user.id).maybeSingle();
-  if(me_e) return 'net';
-  if(!me || me.active === false || !roles[me.role === 'owner' ? 'super' : me.role]){ await sb.auth.signOut(); return 'noprofile'; }
-  const [shopR, brR, prR] = await Promise.all([
-    sb.from('shops').select('id,name,brand').eq('id', me.shop_id).maybeSingle(),
-    sb.from('branches').select('id,name,created_at').eq('shop_id', me.shop_id).order('created_at'),
-    sb.from('profiles').select('user_id,login,name,role,branch_id,active,avatar').eq('shop_id', me.shop_id)]);
-  if(shopR.error || brR.error || prR.error || !shopR.data || !brR.data.length) return 'net';
-  const shop = shopR.data, br = shop.brand || {};
-  if(BRAND.shopId !== shop.id){ resetLocalData(); BRAND.logo = ''; BRAND.bg = ''; BRAND.tagline = ''; }
-  Object.assign(BRAND, {shop: shop.name, tagline: br.tagline || BRAND.tagline || '', color: br.color || BRAND.color, lcolor: br.lcolor || br.color || BRAND.lcolor, demo: false, set: true, shopId: shop.id});
-  branches.splice(0, branches.length, ...brR.data.map(b => ({id: b.id, name: b.name})));
-  users.splice(0, users.length, ...prR.data.filter(p => roles[p.role === 'owner' ? 'super' : p.role]).map(toLocalUser));
-  const u = users.find(x => x.id === me.user_id);
-  saveBrand(); applyBrand(); saveData(); startAs(u);
-  return true;
+function sessionLost(){
+  clearInterval(SY.hb); API.tok = ''; lsSet(TOK_KEY, ''); S.user = null; showLogin(); toast('Seans tugadi. Qayta kiring.');
 }
-function stripKode(){ if(/#k=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); }
-async function claimCode(code){
-  const box = (logo, title, t, extra = '') => { $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(logo, title, t)}<section class="lf"><h2>${t}</h2>${extra}</section></div>`; typeIn($('tg')); };
-  box('⏳', 'Ulanmoqda', 'Havola tekshirilmoqda…');
-  try { await sb.auth.signOut(); } catch(e) {}
-  const {data, error} = await sb.rpc('invite_info', {p_code: code});
-  const inv = Array.isArray(data) ? data[0] : data;
-  if(error || !inv){
-    stripKode();
-    return box('🔒', 'Havola kerak', error ? 'Serverga ulanib bo‘lmadi.' : 'Havola topilmadi yoki allaqachon ishlatilgan.', '<div class="muted">Internetni tekshiring yoki administratordan yangi havola so‘rang.</div>');
+
+/* --- sinxronlash --- */
+function schedulePush(){ if(!API.tok || SY.ro || SY.timer) return; SY.timer = setTimeout(() => { SY.timer = 0; pushNow(); }, 3500); }
+async function pushNow(){
+  if(SY.busy || !S.user || SY.ro || !API.tok || !S.online){ updateNet(); return; }
+  const js = stateJson(), hh = h53(js);
+  if(hh === SY.hash){ unsynced.clear(); updateNet(); return; }
+  SY.busy = true; updateNet();
+  try {
+    const r = await api('push', {baseRev: SY.rev, device: DEV, state: js});
+    markSynced(hh, r.rev); SY.err = ''; unsynced.clear();
+  } catch(x){
+    if(x.code === 'lease' || x.code === 'rev'){ SY.busy = false; return conflict(); }
+    if(x.code === 'auth'){ SY.busy = false; return sessionLost(); }
+    if(x.code === 'perm'){ SY.ro = true; SY.err = 'Yozish huquqi yo‘q'; }
+    else { SY.err = x.net ? 'Internet yo‘q · keyin yuboriladi' : 'Sheets xatosi: ' + x.message; setTimeout(pushNow, 20000); }
   }
-  const cfg = inv.cfg || {};
-  Object.assign(BRAND, {shop: inv.shop_name, color: cfg.color || BRAND.color, lcolor: cfg.lcolor || cfg.color || BRAND.lcolor}); applyBrand();
-  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(BRAND.shop.trim().charAt(0).toUpperCase() || 'S', BRAND.shop, 'Do‘konni faollashtirish')}
-  <section class="lf"><form id="af" autocomplete="off"><h2>${esc(inv.shop_name)}</h2><div class="muted">O‘zingiz uchun login va parol tanlang. Parolni hech kim bilmaydi.</div>
-    <label for="an">Ismingiz</label><input id="an" required>
-    <label for="al">Login (lotin harf, raqam, nuqta, tire)</label><input id="al" autocapitalize="none" autocorrect="off" spellcheck="false" required>
-    <label for="ap">Parol (kamida 8 belgi)</label><input id="ap" type="password" autocomplete="new-password" required>
-    <label for="ap2">Parolni takrorlang</label><input id="ap2" type="password" autocomplete="new-password" required>
-    <div class="err" id="ae" role="alert"></div><button class="btn" style="width:100%">Faollashtirish</button></form></section></div>`;
+  SY.busy = false; updateNet();
+}
+async function conflict(){
+  SY.ro = true; updateNet();
+  if(SY.ask) return; SY.ask = true;
+  const keep = await ask('Ma’lumot boshqa qurilmada o‘zgargan', 'Shu qurilmadagi ma’lumot bilan Sheets’dagi nusxa farq qilyapti. Qaysi biri qolsin? (Boshqasi o‘chadi.)', 'Shu qurilmadagisi qolsin', 'Sheets’dagisi qolsin');
+  SY.ask = false;
+  try {
+    if(keep){ const js = stateJson(), r = await api('push', {baseRev: SY.rev, device: DEV, state: js, force: true}); markSynced(h53(js), r.rev); SY.ro = false; SY.err = ''; }
+    else { const p = await api('pull', {device: DEV, force: true}); SY.ro = !p.lease.mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
+  } catch(x){ toast('Bajarib bo‘lmadi: ' + x.message); }
+  updateNet();
+}
+async function takeOver(){
+  if(!S.user || !WRITERS.includes(S.user.role) || !SY.ro) return;
+  if(!await ask('Shu qurilmada ishlash', 'Boshqa qurilma faqat ko‘rish rejimiga o‘tadi. Davom etamizmi?', 'Ha')) return;
+  try { const p = await api('pull', {device: DEV, force: true}); SY.ro = !p.lease.mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
+  catch(x){ toast('Bajarib bo‘lmadi: ' + x.message); }
+  updateNet();
+}
+function startHb(){
+  clearInterval(SY.hb);
+  SY.hb = setInterval(async () => {
+    if(!S.user || SY.busy || !S.online) return;
+    try {
+      const p = await api('pull', {device: DEV, since: SY.rev});
+      const canWrite = WRITERS.includes(S.user.role), mine = canWrite && p.lease.mine;
+      if(!p.same && (SY.ro || !mine)){ SY.ro = !mine; applyRemote(p); S.user = users.find(x => x.login === S.user.login) || S.user; render(); }
+      else { SY.ro = !mine; if(Array.isArray(p.users)){ setUsers(p.users); S.user = users.find(x => x.login === S.user.login) || S.user; } }
+      updateNet();
+    } catch(x){ if(x.code === 'auth') sessionLost(); }
+  }, 45000);
+}
+function syncNow(){ pushNow(); }
+
+/* --- kirish va ulanish oynalari --- */
+async function enterPull(p, me){
+  const canWrite = WRITERS.includes(me.role);
+  if(canWrite && !p.lease.mine){
+    const go = await ask('Boshqa qurilma faol', `<b>${esc(p.busyBy || 'Boshqa xodim')}</b> boshqa qurilmada ishlayapti. Shu qurilmaga o‘tkazsangiz, u qurilma faqat ko‘rish rejimiga o‘tadi. O‘tkazaymi?`, 'Ha, shu yerda ishlayman', 'Faqat ko‘rish');
+    if(go) p = await api('pull', {device: DEV, force: true});
+  }
+  SY.ro = !(canWrite && p.lease.mine);
+  applyRemote(p);
+  const u = users.find(x => x.login === me.login);
+  if(!u || !roles[u.role]) throw new Error('Akkaunt topilmadi');
+  lsSet(ME_KEY, u.login); startAs(u); startHb(); schedulePush();
+}
+async function enterWith(r){
+  API.tok = r.token; lsSet(TOK_KEY, r.token);
+  if(r.brand) applyBrandRemote(r.brand);
+  await enterPull(await api('pull', {device: DEV}), r.user);
+}
+function showConnect(msg){
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane(BRAND.shop.trim().charAt(0).toUpperCase() || 'S', BRAND.shop, 'Google Sheets bilan ishlaydigan savdo tizimi')}
+  <section class="lf"><form id="cf" autocomplete="off"><h2>Google Sheets ulanishi</h2><div class="muted">Do‘konning Google Sheets faylidagi Apps Script veb-ilova manzilini kiriting.</div>
+    <label for="cu">Apps Script manzili</label><input id="cu" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <div class="err" id="ce" role="alert">${esc(msg || '')}</div><button class="btn" style="width:100%">Ulash</button></form></section></div>`;
   typeIn($('tg'));
-  $('af').onsubmit = async e => {
-    e.preventDefault();
-    const er = m => { $('ae').textContent = m; }, btn = $('af').querySelector('button.btn');
-    const fail = m => { er(m); btn.disabled = false; btn.textContent = 'Faollashtirish'; };
-    er('');
-    const n = $('an').value.trim(), l = $('al').value.trim().toLowerCase(), p = $('ap').value;
-    if(!n) return er('Ismingizni yozing.');
-    if(!loginOk(l)) return er('Login 3–30 belgi bo‘lsin: lotin harf, raqam, nuqta, tire.');
-    if(p.length < 8) return er('Parol kamida 8 belgi bo‘lsin.');
-    if(p !== $('ap2').value) return er('Parollar bir xil emas.');
-    btn.disabled = true; btn.textContent = 'Yaratilmoqda…';
-    const su = await sb.auth.signUp({email: toEmail(l), password: p});
-    if(su.error){
-      if(/already|registered|exists/i.test((su.error.message || '') + (su.error.code || ''))){
-        const r = await sb.auth.signInWithPassword({email: toEmail(l), password: p});   /* oldingi urinish yarim qolgan bo‘lsa davom ettiramiz */
-        if(r.error) return fail('Bu login band. Boshqasini tanlang.');
-      } else return fail(/invalid/i.test(su.error.message || '') ? 'Login qabul qilinmadi. Boshqa login yozing yoki administratorga ayting.' : 'Akkaunt ochilmadi: ' + su.error.message);
-    } else if(!su.data.session) return fail('Akkaunt ochildi, lekin avtomatik kirmadi. Administrator Supabase’da “Confirm email”ni o‘chirishi kerak.');
-    const {error: ce} = await sb.rpc('create_shop', {p_code: code, p_name: n, p_login: l});
-    if(ce){ await sb.auth.signOut(); return fail('Do‘konni yaratib bo‘lmadi: ' + ce.message); }
-    stripKode();
-    const r = await enterApp();
-    if(r !== true){ fail('Do‘kon yaratildi. Endi shu login va parol bilan kiring.'); setTimeout(showLogin, 1800); }
+  $('cf').onsubmit = async e => {
+    e.preventDefault(); const u = $('cu').value.trim(), btn = $('cf').querySelector('button.btn');
+    if(!SCRIPT_RE.test(u)) return $('ce').textContent = 'Manzil https://script.google.com/macros/s/…/exec ko‘rinishida bo‘lsin.';
+    btn.disabled = true; $('ce').textContent = ''; API.url = u;
+    try { const p = await api('ping', {}, false); lsSet(SHEETS_KEY, u); if(p.brand) applyBrandRemote(p.brand); p.needsOwner ? showOwnerSetup() : showLogin(); }
+    catch(x){ API.url = ''; btn.disabled = false; $('ce').textContent = x.net ? 'Manzilga ulanib bo‘lmadi. Joylashtirishda “Hamma” (Anyone) ruxsati tanlanganini tekshiring.' : x.message; }
   };
+}
+function showOwnerSetup(){
+  $('app').innerHTML = `<div class="lw" style="${lwStyle()}">${brandPane('S', BRAND.shop, 'Do‘konni sozlash')}
+  <section class="lf"><form id="of" autocomplete="off"><h2>Do‘konni sozlash</h2><div class="muted">Birinchi marta. Kod Google Sheets faylidagi “Sozlama” varag‘ida (B2 katak).</div>
+    <label for="oc">Sozlash kodi</label><input id="oc" autocapitalize="characters" required>
+    <label for="os">Do‘kon nomi</label><input id="os" required>
+    <label for="ob">Birinchi filial nomi</label><input id="ob" value="Asosiy filial">
+    <label for="on">Sizning ismingiz</label><input id="on" required>
+    <label for="ol">Login (lotin harf, raqam, nuqta, tire)</label><input id="ol" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <label for="op">Parol (kamida 8 belgi)</label><input id="op" type="password" autocomplete="new-password" required>
+    <label for="op2">Parolni takrorlang</label><input id="op2" type="password" autocomplete="new-password" required>
+    <div class="err" id="oe" role="alert"></div><button class="btn" style="width:100%">Boshlash</button></form></section></div>`;
+  typeIn($('tg'));
+  $('of').onsubmit = async e => {
+    e.preventDefault(); const er = m => { $('oe').textContent = m; }, btn = $('of').querySelector('button.btn'); er('');
+    const l = $('ol').value.trim().toLowerCase(), p = $('op').value;
+    if(!loginOk(l)) return er('Login 3–30 belgi: lotin harf, raqam, nuqta, tire.');
+    if(p.length < 8) return er('Parol kamida 8 belgi bo‘lsin.');
+    if(p !== $('op2').value) return er('Parollar bir xil emas.');
+    btn.disabled = true;
+    try { PENDING.branch = $('ob').value.trim() || 'Asosiy filial'; await enterWith(await api('owner', {code: $('oc').value, shop: $('os').value, name: $('on').value, login: l, pass: p}, false)); }
+    catch(x){ btn.disabled = false; er(x.net ? 'Serverga ulanib bo‘lmadi.' : x.message); }
+  };
+}
+async function connectCheck(){
+  try { const p = await api('ping', {}, false); if(p.brand) applyBrandRemote(p.brand); p.needsOwner ? showOwnerSetup() : showLogin(); }
+  catch(x){ showLogin(); if($('le')) $('le').textContent = x.net ? 'Serverga ulanib bo‘lmadi. Internetni tekshiring.' : x.message; }
+}
+async function startSession(){
+  if(!API.url) return showConnect();
+  if(!API.tok) return connectCheck();
+  try { const p = await api('pull', {device: DEV}); await enterPull(p, p.me); }
+  catch(x){
+    if(x.net && BRAND.set){   /* oflayn: oxirgi saqlangan ma’lumot bilan ochamiz */
+      const su = users.find(u => u.login === lsGet(ME_KEY) && !u.off);
+      if(su && roles[su.role]){ SY.ro = false; startAs(su); startHb(); return; }
+    }
+    if(x.code === 'auth'){ API.tok = ''; lsSet(TOK_KEY, ''); }
+    connectCheck();
+  }
 }
 let inited = false;
 function initApp(){
@@ -1662,27 +1743,16 @@ function initApp(){
   setInterval(() => { if(BRAND.set) saveData(); }, 3000);
   addEventListener('pagehide', () => { if(BRAND.set) saveData(); });
 }
-async function startSession(){
-  let session = null;
-  try { session = (await sb.auth.getSession()).data.session; } catch(e) {}
-  if(session){
-    const r = await enterApp();
-    if(r === true) return;
-    if(r === 'net' && BRAND.set){   /* oflayn: oxirgi saqlangan ma’lumot bilan ochamiz */
-      const su = users.find(x => x.id === session.user.id && !x.off);
-      if(su && roles[su.role]){ startAs(su); return; }
-    }
-  }
-  showLogin();
-}
 function boot(){
   const b = lsGet(LS.brand);
   if(b){ try { Object.assign(BRAND, JSON.parse(b)); } catch(e) {} }
   const d = lsGet(LS.data); if(d && BRAND.set){ try { restoreBackup(d); } catch(e) {} }
+  const mu = location.hash.match(/#u=([^&]+)/);      /* xodim qurilmasi uchun: havola ichida Sheets manzili */
+  if(mu){
+    try { const u = decodeURIComponent(mu[1]); if(SCRIPT_RE.test(u)){ API.url = u; lsSet(SHEETS_KEY, u); API.tok = ''; lsSet(TOK_KEY, ''); } } catch(e) {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   initApp();
-  const mk = location.hash.match(/#k=([A-Za-z0-9_-]{6,60})/);
-  if(mk) return claimCode(mk[1]);
-  stripShopLink();
   startSession();
 }
 
@@ -1745,16 +1815,16 @@ function viewOvoz(){
 /* ----- OFLAYN REJIM (sinxronlash simulyatsiyasi) ----- */
 function updateNet(){
   const el = $('net'); if(!el) return;
-  const n = unsynced.size;
-  el.textContent = S.online ? (n ? `Onlayn · ${n} ta sinxronlanmagan` : 'Onlayn') : `Oflayn${n ? ` · ${n} ta sotuv navbatda` : ''}`;
-  el.className = 'who net' + (S.online ? '' : ' offl');
+  const n = unsynced.size, canWrite = S.user && WRITERS.includes(S.user.role);
+  let t, off = false;
+  if(SY.ro){ t = canWrite ? 'Faqat ko‘rish · boshqa qurilma faol (bosing)' : 'Faqat ko‘rish'; off = true; }
+  else if(!S.online){ t = `Oflayn${n ? ` · ${n} ta sotuv navbatda` : ''}`; off = true; }
+  else if(SY.busy) t = 'Sheets’ga saqlanmoqda…';
+  else if(SY.err){ t = SY.err; off = true; }
+  else t = API.url ? 'Sheets · saqlandi' : 'Onlayn';
+  el.textContent = t; el.className = 'who net' + (off ? ' offl' : '');
+  el.onclick = SY.ro && canWrite ? takeOver : null; el.style.cursor = SY.ro && canWrite ? 'pointer' : '';
   if($('nt')) $('nt').textContent = S.online ? 'Oflaynni sinash' : 'Onlaynga qaytish';
-}
-function syncNow(){
-  const n = unsynced.size; if(!n) return;
-  unsynced.clear();
-  if(S.user) addLog('sync', null, S.branch, n, 0, `${n} ta oflayn savdo serverga yuborildi`);
-  toast(`${n} ta sotuv sinxronlandi`);
 }
 function setOnline(v){ S.online = v; if(v) syncNow(); updateNet(); }
 window.addEventListener('online', () => setOnline(true));
